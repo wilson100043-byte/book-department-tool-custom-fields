@@ -1076,7 +1076,7 @@
     }
 
     function parseDepartmentRules(csvText, schoolName) {
-      const text = cleanText(csvText);
+      const text = String(csvText ?? "").replace(/\uFEFF/g, "").trim();
       if (!text) throw new Error("請先把 AI 回傳 CSV 貼到工具。");
       return parseCsvRows(text)
         .map((row) => ({
