@@ -1,0 +1,1278 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>書單已購買與系所比對工具｜自訂欄位用途版</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --bg: #f5f7f8;
+      --panel: #ffffff;
+      --text: #17202a;
+      --muted: #667085;
+      --line: #d7dee7;
+      --soft: #f8fafc;
+      --accent: #0f766e;
+      --accent-dark: #115e59;
+      --danger: #b42318;
+      --danger-bg: #fff1f0;
+      --ok-bg: #ecfdf3;
+      --ok-text: #067647;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Microsoft JhengHei", "PingFang TC", system-ui, sans-serif;
+    }
+
+    main {
+      width: min(1180px, calc(100% - 32px));
+      margin: 28px auto 44px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 30px;
+      letter-spacing: 0;
+    }
+
+    h2, h3 {
+      margin: 0;
+      letter-spacing: 0;
+    }
+
+    h2 { font-size: 20px; }
+    h3 { font-size: 16px; }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--accent);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .header-note {
+      max-width: 460px;
+      margin: 4px 0 0;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 320px;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 22px;
+      box-shadow: 0 10px 30px rgb(29 42 49 / 7%);
+    }
+
+    .section-title {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 18px;
+    }
+
+    .section-title p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px 20px;
+    }
+
+    label {
+      display: grid;
+      gap: 8px;
+      font-weight: 700;
+    }
+
+    .wide { grid-column: 1 / -1; }
+
+    input, select, textarea {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 9px 11px;
+      background: #fff;
+      color: var(--text);
+      font: inherit;
+    }
+
+    textarea {
+      min-height: 150px;
+      resize: vertical;
+      line-height: 1.5;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: 3px solid rgb(15 118 110 / 18%);
+      border-color: var(--accent);
+    }
+
+    small {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 400;
+      line-height: 1.5;
+    }
+
+    button, .button-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      border: 0;
+      border-radius: 6px;
+      padding: 0 18px;
+      background: var(--accent);
+      color: #fff;
+      font: inherit;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    button:hover, .button-link:hover { background: var(--accent-dark); }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+
+    .secondary {
+      background: #e6f2f0;
+      color: var(--accent-dark);
+      border: 1px solid #b7d8d3;
+    }
+
+    .secondary:hover { background: #d7ebe7; }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 20px;
+      align-items: center;
+    }
+
+    .message {
+      margin-top: 16px;
+      border-radius: 6px;
+      padding: 12px 14px;
+      background: var(--ok-bg);
+      color: var(--ok-text);
+      line-height: 1.6;
+      font-weight: 700;
+    }
+
+    .message.error {
+      background: var(--danger-bg);
+      color: var(--danger);
+    }
+
+    .mapping-section {
+      margin-top: 22px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+    }
+
+    .mapping-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px 16px;
+      margin-top: 14px;
+    }
+
+    .mapping-grid label {
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--soft);
+    }
+
+    .required-mark {
+      color: var(--danger);
+      font-weight: 800;
+    }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .stat {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      background: var(--soft);
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 24px;
+      margin-bottom: 4px;
+    }
+
+    .stat span {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .side-panel {
+      position: sticky;
+      top: 16px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .plain-list {
+      margin: 0;
+      padding-left: 20px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .sample {
+      margin: 10px 0 0;
+      padding: 12px;
+      white-space: pre-wrap;
+      overflow-x: auto;
+      background: #111827;
+      color: #e5e7eb;
+      border-radius: 6px;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .note {
+      padding: 12px;
+      border-radius: 8px;
+      background: #fff7ed;
+      color: #9a3412;
+      line-height: 1.6;
+      font-weight: 700;
+    }
+
+    [hidden] { display: none !important; }
+
+    @media (max-width: 900px) {
+      header, .layout { display: block; }
+      .header-note { max-width: none; margin-top: 10px; }
+      .side-panel { position: static; margin-top: 18px; }
+      .form-grid, .mapping-grid, .result-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <p class="eyebrow">純前端單檔 HTML + XLSX.js</p>
+        <h1>書單已購買與系所比對</h1>
+      </div>
+      <p class="header-note">自訂欄位用途版。Excel 只在瀏覽器本機處理，輸出保留出版社原始欄位與原始順序，只在最後新增比對結果欄位。</p>
+    </header>
+
+    <section class="layout">
+      <form id="matchForm" class="panel">
+        <div class="section-title">
+          <h2>1. 上傳書單並指定欄位用途</h2>
+          <p>先選工作表，工具會讀取欄位列，再由你指定哪些欄位要當書名、主題、ISBN 或系統上傳欄位。</p>
+        </div>
+
+        <div class="form-grid">
+          <label class="wide">
+            <span>出版社書單 Excel</span>
+            <input id="sourceFile" type="file" accept=".xlsx,.xls,.xltx">
+            <small>必填。支援一般出版社書單，不限定 Wiley 欄位名稱。</small>
+          </label>
+
+          <label>
+            <span>出版社書單工作表</span>
+            <select id="sourceSheet"></select>
+          </label>
+
+          <label>
+            <span>已購買 Excel（選填）</span>
+            <input id="purchasedFile" type="file" accept=".xlsx,.xls,.xltx">
+            <small>若上傳，會使用 ISBN / 查重欄位做精準比對。</small>
+          </label>
+
+          <label>
+            <span>已購買工作表</span>
+            <select id="purchasedSheet"></select>
+          </label>
+        </div>
+
+        <section id="sourceMappingSection" class="mapping-section" hidden>
+          <h3>出版社書單欄位用途</h3>
+          <div id="sourceMapping" class="mapping-grid"></div>
+        </section>
+
+        <section id="purchasedMappingSection" class="mapping-section" hidden>
+          <h3>已購買書單欄位用途</h3>
+          <div id="purchasedMapping" class="mapping-grid"></div>
+        </section>
+
+        <section class="mapping-section">
+          <div class="section-title">
+            <h2>2. 系所比對與系統上傳設定</h2>
+            <p>AI CSV 格式維持：學校名稱,系所名稱,關鍵字。關鍵字可用 ; 或 ； 分隔。</p>
+          </div>
+
+          <div class="form-grid">
+            <label>
+              <span>學校名稱</span>
+              <input id="schoolName" type="text" placeholder="例如：淡江大學">
+            </label>
+
+            <label>
+              <span>學校代碼</span>
+              <input id="schoolCode" type="text" placeholder="例如：TKU">
+            </label>
+
+            <label>
+              <span>主題代碼</span>
+              <input id="subjectCode" type="text" placeholder="例如：EBOOK">
+              <small>會自動轉成大寫，只能使用英文字母、數字與底線。</small>
+            </label>
+
+            <label>
+              <span>SDGs</span>
+              <input id="sdgs" type="text" placeholder=",9,">
+              <small>格式像 ,9, 或 ,9,12,。</small>
+            </label>
+
+            <label class="wide">
+              <span>貼上學校系所描述（給 AI 用）</span>
+              <textarea id="sourceDepartmentText" placeholder="可貼上學院、系所清單、學校網頁整理文字。"></textarea>
+            </label>
+
+            <label class="wide">
+              <span>AI 產生用 Prompt</span>
+              <button id="copyPromptButton" class="secondary" type="button">複製 AI 產生系所關鍵字 Prompt</button>
+              <small>貼到 ChatGPT、Gemini 或其他 AI。AI 回傳後，把整段 CSV 貼到下一格。</small>
+            </label>
+
+            <label class="wide">
+              <span>AI 回傳結果（CSV）</span>
+              <textarea id="keywordText" placeholder="學校名稱,系所名稱,關鍵字&#10;淡江大學,財務金融學系,財務金融;金融;投資;corporate finance"></textarea>
+            </label>
+
+            <label class="wide">
+              <span>AI 回傳 CSV 檔（選填）</span>
+              <input id="keywordFile" type="file" accept=".csv,.txt">
+            </label>
+          </div>
+        </section>
+
+        <div class="actions">
+          <button id="submitButton" type="submit">開始比對並產生 Excel</button>
+          <a id="downloadOutput" class="button-link" href="#" download="書單_自訂欄位用途_比對結果.xlsx" hidden>下載比對結果 Excel</a>
+        </div>
+
+        <section id="message" class="message" hidden></section>
+
+        <section id="result" hidden>
+          <div class="result-grid">
+            <div class="stat"><strong id="totalCount">0</strong><span>總筆數</span></div>
+            <div class="stat"><strong id="purchasedCount">0</strong><span>已購買</span></div>
+            <div class="stat"><strong id="notPurchasedCount">0</strong><span>未購買</span></div>
+            <div class="stat"><strong id="departmentCount">0</strong><span>命中系所</span></div>
+          </div>
+        </section>
+
+        <section id="uploadPanel" class="mapping-section" hidden>
+          <div class="section-title">
+            <h2>3. 產生系統上傳格式</h2>
+            <p>會使用你指定的欄位用途建立 Tablib Dataset，上傳欄位不再依賴任何特定出版社欄名。</p>
+          </div>
+          <div class="actions">
+            <button id="createUploadButton" class="secondary" type="button">產生未購買書目的系統上傳格式</button>
+            <button id="createAllUploadButton" class="secondary" type="button">產生全部書目的系統上傳格式</button>
+            <a id="downloadUpload" class="button-link" href="#" download="系統上傳格式.xlsx" hidden>下載系統上傳格式</a>
+          </div>
+        </section>
+      </form>
+
+      <aside class="side-panel">
+        <section class="panel">
+          <h2>流程</h2>
+          <ul class="plain-list">
+            <li>上傳出版社書單並指定欄位用途</li>
+            <li>若有已購買書單，也指定查重欄位</li>
+            <li>貼上 AI 回傳 CSV 後開始比對</li>
+            <li>下載保留原始欄位的結果 Excel</li>
+            <li>需要時再產生系統上傳格式</li>
+          </ul>
+        </section>
+
+        <section class="panel">
+          <h2>AI 回傳格式</h2>
+          <ul class="plain-list">
+            <li>第一列固定：學校名稱、系所名稱、關鍵字</li>
+            <li>關鍵字用半形或全形分號分隔</li>
+            <li>比對文字只取你指定的書名、主題、子主題、內容簡介、目次</li>
+          </ul>
+          <pre class="sample">學校名稱,系所名稱,關鍵字
+淡江大學,財務金融學系,財務金融;金融;投資;corporate finance
+淡江大學,會計學系,會計;審計;稅務;accounting;auditing</pre>
+        </section>
+
+        <section class="note">
+          ISBN 查重會先移除空白、hyphen 與非 0-9/X 字元，並轉成大寫。不做書名模糊比對。
+        </section>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const SOURCE_FIELDS = [
+      { key: "title", label: "title：書名", required: true, help: "必填，用於系所比對與系統上傳題名。" },
+      { key: "subject_main", label: "subject_main：主題", required: false, help: "選填，用於系所比對；也可作為上傳主題備援。" },
+      { key: "subject_sub", label: "subject_sub：子主題", required: false, help: "選填，用於系所比對；優先作為上傳主題備援。" },
+      { key: "description", label: "description：內容簡介", required: false, help: "選填，用於系所比對與上傳內容簡介。" },
+      { key: "toc", label: "toc：目次", required: false, help: "選填，用於系所比對與上傳目次。" },
+      { key: "source_purchase_key", label: "source_purchase_key：出版社 ISBN / 查重欄位", required: false, help: "若有已購買書單則必填，用於 ISBN 查重。" },
+      { key: "author", label: "author：作者", required: false, help: "選填，用於系統上傳格式。" },
+      { key: "publisher", label: "publisher：出版者", required: false, help: "選填，用於系統上傳格式。" },
+      { key: "year", label: "year：出版年", required: false, help: "選填，用於系統上傳格式。" },
+      { key: "url", label: "url：網址", required: false, help: "選填，用於系統上傳格式。" },
+      { key: "upload_isbn", label: "upload_isbn：系統上傳用 ISBN", required: false, help: "選填，沒選則使用 source_purchase_key。" },
+      { key: "upload_subject", label: "upload_subject：系統上傳用主題", required: false, help: "選填，沒選則使用 subject_sub，再使用 subject_main。" },
+    ];
+
+    const PURCHASED_FIELDS = [
+      { key: "purchased_key", label: "purchased_key：已購買 ISBN / 查重欄位", required: true, help: "有上傳已購買書單時必填。" },
+      { key: "purchased_title", label: "purchased_title：已購買書名", required: false, help: "選填，只供人工參考，不做模糊比對。" },
+      { key: "purchased_date", label: "purchased_date：採購日期", required: false, help: "選填，輸出到已購買日期。" },
+      { key: "purchased_source", label: "purchased_source：採購來源", required: false, help: "選填，輸出到購買比對來源。" },
+    ];
+
+    const RESULT_COLUMNS = [
+      "對應系所",
+      "命中關鍵字",
+      "系所標記狀態",
+      "是否已購買",
+      "購買比對值",
+      "購買比對來源",
+      "已購買日期",
+    ];
+
+    const UPLOAD_COLUMNS = [
+      "ID",
+      "學校代碼",
+      "主題代碼(全字母大寫)",
+      "題名(可大寫可小寫)",
+      "作者(可大寫可小寫)",
+      "出版者(可大寫可小寫)",
+      "出版年",
+      "索書號-CCL",
+      "索書號-LC",
+      "索書號-DDC",
+      "索書號-NLM",
+      "ISBN",
+      "資料類型",
+      "備註",
+      "內容簡介",
+      "目次",
+      "pic",
+      "書封網址",
+      "書封來源",
+      "網址",
+      "網址說明",
+      "SDGs(數字前後一定要有逗號)",
+      "主題(英文大小寫皆可，出版社主題若有逗號，請改為 &\n若有多主題以逗號區隔。)",
+    ];
+
+    const state = {
+      sourceWorkbook: null,
+      purchasedWorkbook: null,
+      sourceData: null,
+      purchasedData: null,
+      lastConversion: null,
+      outputBytes: null,
+      uploadBytes: null,
+      outputUrl: null,
+      uploadUrl: null,
+    };
+
+    const els = {
+      form: document.querySelector("#matchForm"),
+      sourceFile: document.querySelector("#sourceFile"),
+      sourceSheet: document.querySelector("#sourceSheet"),
+      purchasedFile: document.querySelector("#purchasedFile"),
+      purchasedSheet: document.querySelector("#purchasedSheet"),
+      sourceMappingSection: document.querySelector("#sourceMappingSection"),
+      purchasedMappingSection: document.querySelector("#purchasedMappingSection"),
+      sourceMapping: document.querySelector("#sourceMapping"),
+      purchasedMapping: document.querySelector("#purchasedMapping"),
+      schoolName: document.querySelector("#schoolName"),
+      schoolCode: document.querySelector("#schoolCode"),
+      subjectCode: document.querySelector("#subjectCode"),
+      sdgs: document.querySelector("#sdgs"),
+      sourceDepartmentText: document.querySelector("#sourceDepartmentText"),
+      copyPromptButton: document.querySelector("#copyPromptButton"),
+      keywordText: document.querySelector("#keywordText"),
+      keywordFile: document.querySelector("#keywordFile"),
+      submitButton: document.querySelector("#submitButton"),
+      message: document.querySelector("#message"),
+      result: document.querySelector("#result"),
+      totalCount: document.querySelector("#totalCount"),
+      purchasedCount: document.querySelector("#purchasedCount"),
+      notPurchasedCount: document.querySelector("#notPurchasedCount"),
+      departmentCount: document.querySelector("#departmentCount"),
+      downloadOutput: document.querySelector("#downloadOutput"),
+      uploadPanel: document.querySelector("#uploadPanel"),
+      createUploadButton: document.querySelector("#createUploadButton"),
+      createAllUploadButton: document.querySelector("#createAllUploadButton"),
+      downloadUpload: document.querySelector("#downloadUpload"),
+    };
+
+    els.sourceFile.addEventListener("change", async () => {
+      clearOutputs();
+      const file = els.sourceFile.files[0];
+      if (!file) return resetSource();
+      try {
+        ensureXlsx();
+        state.sourceWorkbook = await readWorkbook(file);
+        populateSheetSelect(els.sourceSheet, state.sourceWorkbook.SheetNames);
+        loadSourceSheet();
+        showMessage("出版社書單已讀取。請指定欄位用途。", false);
+      } catch (error) {
+        resetSource();
+        showMessage(error.message || "出版社書單讀取失敗。", true);
+      }
+    });
+
+    els.sourceSheet.addEventListener("change", () => {
+      clearOutputs();
+      try {
+        loadSourceSheet();
+        showMessage("出版社工作表已切換，欄位用途選單已更新。", false);
+      } catch (error) {
+        showMessage(error.message || "工作表讀取失敗。", true);
+      }
+    });
+
+    els.purchasedFile.addEventListener("change", async () => {
+      clearOutputs();
+      const file = els.purchasedFile.files[0];
+      if (!file) return resetPurchased();
+      try {
+        ensureXlsx();
+        state.purchasedWorkbook = await readWorkbook(file);
+        populateSheetSelect(els.purchasedSheet, state.purchasedWorkbook.SheetNames);
+        loadPurchasedSheet();
+        showMessage("已購買書單已讀取。請指定已購買查重欄位。", false);
+      } catch (error) {
+        resetPurchased();
+        showMessage(error.message || "已購買書單讀取失敗。", true);
+      }
+    });
+
+    els.purchasedSheet.addEventListener("change", () => {
+      clearOutputs();
+      try {
+        loadPurchasedSheet();
+        showMessage("已購買工作表已切換，欄位用途選單已更新。", false);
+      } catch (error) {
+        showMessage(error.message || "已購買工作表讀取失敗。", true);
+      }
+    });
+
+    els.keywordFile.addEventListener("change", async () => {
+      const file = els.keywordFile.files[0];
+      if (!file) return;
+      try {
+        els.keywordText.value = await readTextFile(file);
+        showMessage("AI 回傳 CSV 已載入。", false);
+      } catch (error) {
+        showMessage(error.message || "CSV 讀取失敗。", true);
+      }
+    });
+
+    els.copyPromptButton.addEventListener("click", async () => {
+      try {
+        await copyText(buildAiPrompt());
+        showMessage("已複製 Prompt。請貼到 AI，回傳 CSV 後再貼回工具。", false);
+      } catch (error) {
+        showMessage("瀏覽器無法自動複製，請手動選取 Prompt 內容。", true);
+      }
+    });
+
+    els.form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      runConversion();
+    });
+
+    els.createUploadButton.addEventListener("click", () => createUploadWorkbook(false));
+    els.createAllUploadButton.addEventListener("click", () => createUploadWorkbook(true));
+
+    els.downloadOutput.addEventListener("click", (event) => forceWorkbookDownload(event, state.outputBytes, els.downloadOutput.download));
+    els.downloadUpload.addEventListener("click", (event) => forceWorkbookDownload(event, state.uploadBytes, els.downloadUpload.download));
+
+    function ensureXlsx() {
+      if (!window.XLSX) {
+        throw new Error("無法載入 XLSX.js。請確認目前網路可連到 CDN 後重新整理頁面。");
+      }
+    }
+
+    function resetSource() {
+      state.sourceWorkbook = null;
+      state.sourceData = null;
+      els.sourceSheet.innerHTML = "";
+      els.sourceMapping.innerHTML = "";
+      els.sourceMappingSection.hidden = true;
+    }
+
+    function resetPurchased() {
+      state.purchasedWorkbook = null;
+      state.purchasedData = null;
+      els.purchasedSheet.innerHTML = "";
+      els.purchasedMapping.innerHTML = "";
+      els.purchasedMappingSection.hidden = true;
+    }
+
+    function populateSheetSelect(select, sheetNames) {
+      select.innerHTML = "";
+      sheetNames.forEach((name) => select.appendChild(new Option(name, name)));
+      select.value = sheetNames[0] || "";
+    }
+
+    function loadSourceSheet() {
+      if (!state.sourceWorkbook || !els.sourceSheet.value) return;
+      state.sourceData = readWorksheetAsTable(state.sourceWorkbook, els.sourceSheet.value);
+      renderMappingControls(els.sourceMapping, SOURCE_FIELDS, state.sourceData.headers, "source-field");
+      applySourceGuesses();
+      els.sourceMappingSection.hidden = false;
+    }
+
+    function loadPurchasedSheet() {
+      if (!state.purchasedWorkbook || !els.purchasedSheet.value) return;
+      state.purchasedData = readWorksheetAsTable(state.purchasedWorkbook, els.purchasedSheet.value);
+      renderMappingControls(els.purchasedMapping, PURCHASED_FIELDS, state.purchasedData.headers, "purchased-field");
+      applyPurchasedGuesses();
+      els.purchasedMappingSection.hidden = false;
+    }
+
+    function renderMappingControls(container, fields, headers, attrName) {
+      container.innerHTML = "";
+      fields.forEach((field) => {
+        const label = document.createElement("label");
+        const title = document.createElement("span");
+        title.innerHTML = `${escapeHtml(field.label)} ${field.required ? '<span class="required-mark">*</span>' : ""}`;
+        const select = document.createElement("select");
+        select.setAttribute(`data-${attrName}`, field.key);
+        select.appendChild(new Option("不指定", ""));
+        headers.forEach((header, index) => {
+          const displayName = header ? `${header}（第 ${index + 1} 欄）` : `空白欄名（第 ${index + 1} 欄）`;
+          select.appendChild(new Option(displayName, String(index)));
+        });
+        const help = document.createElement("small");
+        help.textContent = field.help;
+        label.append(title, select, help);
+        container.appendChild(label);
+      });
+    }
+
+    function applySourceGuesses() {
+      const guesses = {
+        title: ["title", "題名", "書名", "書籍名稱", "book title"],
+        subject_main: ["main subject", "主題", "大類", "subject", "category"],
+        subject_sub: ["sub subject", "specialized subject", "子主題", "次主題", "細分類"],
+        description: ["description", "abstract", "summary", "內容簡介", "簡介", "摘要"],
+        toc: ["toc", "table of contents", "目次", "目錄"],
+        source_purchase_key: ["isbn", "isbn13", "isbn-13", "o-book isbn13", "e-book isbn13", "國際標準書號"],
+        author: ["author", "first author", "作者"],
+        publisher: ["publisher", "imprint", "出版者", "出版社"],
+        year: ["year", "copyright year", "出版年"],
+        url: ["url", "網址", "link"],
+        upload_isbn: ["isbn", "isbn13", "isbn-13", "o-book isbn13", "e-book isbn13", "國際標準書號"],
+        upload_subject: ["specialized subject", "sub subject", "主題", "子主題", "次主題"],
+      };
+      applyGuesses("source-field", state.sourceData.headers, guesses);
+    }
+
+    function applyPurchasedGuesses() {
+      const guesses = {
+        purchased_key: ["isbn", "isbn13", "isbn-13", "o-isbn", "國際標準書號"],
+        purchased_title: ["title", "題名", "書名"],
+        purchased_date: ["date", "採購日期", "購買日期", "purchase date"],
+        purchased_source: ["source", "採購來源", "來源", "vendor", "供應商"],
+      };
+      applyGuesses("purchased-field", state.purchasedData.headers, guesses);
+    }
+
+    function applyGuesses(attrName, headers, guesses) {
+      Object.entries(guesses).forEach(([fieldKey, candidates]) => {
+        const select = document.querySelector(`select[data-${attrName}="${fieldKey}"]`);
+        if (!select) return;
+        const matchIndex = findHeaderIndex(headers, candidates);
+        if (matchIndex >= 0) select.value = String(matchIndex);
+      });
+    }
+
+    function findHeaderIndex(headers, candidates) {
+      const normalizedHeaders = headers.map((header) => normalizeHeader(header));
+      for (const candidate of candidates) {
+        const normalizedCandidate = normalizeHeader(candidate);
+        const exact = normalizedHeaders.findIndex((header) => header === normalizedCandidate);
+        if (exact >= 0) return exact;
+      }
+      for (const candidate of candidates) {
+        const normalizedCandidate = normalizeHeader(candidate);
+        const partial = normalizedHeaders.findIndex((header) => header.includes(normalizedCandidate) || normalizedCandidate.includes(header));
+        if (partial >= 0) return partial;
+      }
+      return -1;
+    }
+
+    function runConversion() {
+      clearOutputs();
+      try {
+        ensureXlsx();
+        if (!state.sourceData) throw new Error("請先上傳出版社書單並選擇工作表。");
+        const sourceMap = getFieldMap("source-field");
+        validateSourceMap(sourceMap);
+        const hasPurchased = Boolean(state.purchasedData);
+        const purchasedMap = hasPurchased ? getFieldMap("purchased-field") : {};
+        if (hasPurchased) validatePurchasedMap(sourceMap, purchasedMap);
+
+        const schoolName = cleanText(els.schoolName.value);
+        if (!schoolName) throw new Error("請輸入學校名稱。");
+        const departmentRules = parseDepartmentRules(els.keywordText.value, schoolName);
+        if (!departmentRules.length) throw new Error(`AI 回傳結果找不到「${schoolName}」的資料。`);
+
+        els.submitButton.disabled = true;
+        els.submitButton.textContent = "比對中...";
+
+        const conversion = buildResultWorkbookData({
+          sourceData: state.sourceData,
+          sourceMap,
+          purchasedData: state.purchasedData,
+          purchasedMap,
+          departmentRules,
+        });
+        state.lastConversion = conversion;
+        renderResult(conversion);
+        showMessage("比對完成。結果 Excel 已保留原始欄位，並在最後新增結果欄位。", false);
+      } catch (error) {
+        showMessage(error.message || "比對失敗，請確認檔案與欄位設定。", true);
+      } finally {
+        els.submitButton.disabled = false;
+        els.submitButton.textContent = "開始比對並產生 Excel";
+      }
+    }
+
+    function getFieldMap(attrName) {
+      const map = {};
+      document.querySelectorAll(`select[data-${attrName}]`).forEach((select) => {
+        const key = select.getAttribute(`data-${attrName}`);
+        map[key] = select.value === "" ? null : Number(select.value);
+      });
+      return map;
+    }
+
+    function validateSourceMap(map) {
+      if (map.title === null) throw new Error("請指定出版社書單的 title：書名欄位。");
+      if (state.purchasedData && map.source_purchase_key === null) {
+        throw new Error("有上傳已購買書單時，請指定 source_purchase_key：出版社 ISBN / 查重欄位。");
+      }
+    }
+
+    function validatePurchasedMap(sourceMap, purchasedMap) {
+      if (sourceMap.source_purchase_key === null) throw new Error("請指定出版社書單的 source_purchase_key。");
+      if (purchasedMap.purchased_key === null) throw new Error("請指定已購買書單的 purchased_key。");
+    }
+
+    function buildResultWorkbookData({ sourceData, sourceMap, purchasedData, purchasedMap, departmentRules }) {
+      const purchasedIndex = purchasedData ? buildPurchasedIndex(purchasedData.rows, purchasedMap) : new Map();
+      const outputRows = [];
+      let purchasedCount = 0;
+      let departmentHitCount = 0;
+
+      sourceData.rows.forEach((row) => {
+        const matchResult = matchDepartments(row, sourceMap, departmentRules);
+        const purchaseResult = findPurchase(row, sourceMap, purchasedIndex);
+        if (purchaseResult.isPurchased) purchasedCount += 1;
+        if (matchResult.departments.length) departmentHitCount += 1;
+        outputRows.push({
+          originalValues: row.values.slice(),
+          resultValues: [
+            matchResult.departments.join("；"),
+            matchResult.keywords.join("；"),
+            matchResult.departments.length ? "已標記" : "未標記",
+            purchasedData ? (purchaseResult.isPurchased ? "已購買" : "未購買") : "未比對",
+            purchaseResult.value,
+            purchaseResult.source,
+            purchaseResult.date,
+          ],
+          isPurchased: purchaseResult.isPurchased,
+          sourceRow: row,
+        });
+      });
+
+      return {
+        sourceHeaders: sourceData.headers.slice(),
+        outputRows,
+        totalCount: outputRows.length,
+        purchasedCount,
+        notPurchasedCount: purchasedData ? outputRows.length - purchasedCount : 0,
+        departmentHitCount,
+        sourceMap,
+      };
+    }
+
+    function buildPurchasedIndex(rows, purchasedMap) {
+      const index = new Map();
+      rows.forEach((row) => {
+        const normalized = normalizeIsbn(getCell(row, purchasedMap.purchased_key));
+        if (!normalized || index.has(normalized)) return;
+        index.set(normalized, {
+          value: normalized,
+          source: cleanText(getCell(row, purchasedMap.purchased_source)),
+          date: cleanText(getCell(row, purchasedMap.purchased_date)),
+          title: cleanText(getCell(row, purchasedMap.purchased_title)),
+        });
+      });
+      return index;
+    }
+
+    function findPurchase(row, sourceMap, purchasedIndex) {
+      if (!purchasedIndex.size) return { isPurchased: false, value: "", source: "", date: "" };
+      const normalized = normalizeIsbn(getCell(row, sourceMap.source_purchase_key));
+      if (!normalized) return { isPurchased: false, value: "", source: "", date: "" };
+      const hit = purchasedIndex.get(normalized);
+      if (!hit) return { isPurchased: false, value: normalized, source: "", date: "" };
+      return {
+        isPurchased: true,
+        value: hit.value,
+        source: hit.source,
+        date: hit.date,
+      };
+    }
+
+    function matchDepartments(row, sourceMap, departmentRules) {
+      const textFields = ["title", "subject_main", "subject_sub", "description", "toc"];
+      const haystack = textFields.map((key) => cleanText(getCell(row, sourceMap[key]))).filter(Boolean).join(" ");
+      const departments = [];
+      const keywords = [];
+      departmentRules.forEach((rule) => {
+        const ruleHits = rule.keywords.filter((keyword) => keywordMatches(keyword, haystack));
+        if (!ruleHits.length) return;
+        departments.push(rule.department);
+        ruleHits.forEach((keyword) => keywords.push(`${rule.department}：${keyword}`));
+      });
+      return {
+        departments: uniqueValues(departments),
+        keywords: uniqueValues(keywords),
+      };
+    }
+
+    function keywordMatches(keyword, haystack) {
+      const cleanedKeyword = cleanText(keyword);
+      if (!cleanedKeyword || !haystack) return false;
+      if (containsCjk(cleanedKeyword)) return haystack.includes(cleanedKeyword);
+      const pattern = new RegExp(`(^|[^a-z0-9])${escapeRegExp(cleanedKeyword.toLowerCase())}([^a-z0-9]|$)`, "i");
+      return pattern.test(haystack.toLowerCase());
+    }
+
+    function renderResult(conversion) {
+      revokeOutputUrls();
+      const aoa = [
+        [...conversion.sourceHeaders, ...RESULT_COLUMNS],
+        ...conversion.outputRows.map((row) => [...row.originalValues, ...row.resultValues]),
+      ];
+      const worksheet = XLSX.utils.aoa_to_sheet(aoa);
+      const range = XLSX.utils.decode_range(worksheet["!ref"]);
+      worksheet["!autofilter"] = { ref: XLSX.utils.encode_range(range) };
+      worksheet["!cols"] = aoa[0].map((header) => ({ wch: Math.min(Math.max(cleanText(header).length + 4, 12), 36) }));
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "全部比對結果");
+      state.outputBytes = workbookToBytes(workbook);
+      state.outputUrl = bytesToUrl(state.outputBytes);
+
+      els.totalCount.textContent = conversion.totalCount;
+      els.purchasedCount.textContent = conversion.purchasedCount;
+      els.notPurchasedCount.textContent = conversion.notPurchasedCount;
+      els.departmentCount.textContent = conversion.departmentHitCount;
+      els.downloadOutput.href = state.outputUrl;
+      els.downloadOutput.hidden = false;
+      els.result.hidden = false;
+      els.uploadPanel.hidden = false;
+    }
+
+    function createUploadWorkbook(includePurchased) {
+      try {
+        if (!state.lastConversion) throw new Error("請先完成書單比對。");
+        const settings = getUploadSettings();
+        const rows = state.lastConversion.outputRows
+          .filter((row) => includePurchased || !row.isPurchased)
+          .map((row) => buildUploadRow(row.sourceRow, state.lastConversion.sourceMap, settings));
+        const worksheet = XLSX.utils.json_to_sheet(rows, { header: UPLOAD_COLUMNS });
+        const range = XLSX.utils.decode_range(worksheet["!ref"]);
+        worksheet["!autofilter"] = { ref: XLSX.utils.encode_range(range) };
+        worksheet["!cols"] = UPLOAD_COLUMNS.map((header) => ({ wch: Math.min(Math.max(cleanText(header).length + 2, 12), 34) }));
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Tablib Dataset");
+
+        if (state.uploadUrl) URL.revokeObjectURL(state.uploadUrl);
+        state.uploadBytes = workbookToBytes(workbook);
+        state.uploadUrl = bytesToUrl(state.uploadBytes);
+        els.downloadUpload.href = state.uploadUrl;
+        els.downloadUpload.download = includePurchased ? "系統上傳格式_全部書目.xlsx" : "系統上傳格式_未購買書目.xlsx";
+        els.downloadUpload.hidden = false;
+        showMessage(`系統上傳格式已產生，共 ${rows.length} 筆。`, false);
+      } catch (error) {
+        showMessage(error.message || "系統上傳格式產生失敗。", true);
+      }
+    }
+
+    function getUploadSettings() {
+      const schoolCode = cleanText(els.schoolCode.value);
+      const subjectCode = cleanText(els.subjectCode.value).toUpperCase();
+      const sdgs = cleanText(els.sdgs.value);
+      if (!schoolCode) throw new Error("請輸入學校代碼。");
+      if (!subjectCode) throw new Error("請輸入主題代碼。");
+      if (!/^[A-Z0-9_]+$/.test(subjectCode)) throw new Error("主題代碼只能使用英文字母、數字與底線。");
+      if (!/^,(?:\d+,)+$/.test(sdgs)) throw new Error("SDGs 格式必須像 ,9, 或 ,9,12,。");
+      els.subjectCode.value = subjectCode;
+      return { schoolCode, subjectCode, sdgs };
+    }
+
+    function buildUploadRow(row, sourceMap, settings) {
+      const uploadIsbn = firstCleanValue([
+        getCell(row, sourceMap.upload_isbn),
+        getCell(row, sourceMap.source_purchase_key),
+      ], cleanIsbn);
+      const uploadSubject = firstCleanValue([
+        getCell(row, sourceMap.upload_subject),
+        getCell(row, sourceMap.subject_sub),
+        getCell(row, sourceMap.subject_main),
+      ], cleanUploadSubject);
+      return {
+        "ID": "",
+        "學校代碼": settings.schoolCode,
+        "主題代碼(全字母大寫)": settings.subjectCode,
+        "題名(可大寫可小寫)": cleanText(getCell(row, sourceMap.title)),
+        "作者(可大寫可小寫)": cleanText(getCell(row, sourceMap.author)),
+        "出版者(可大寫可小寫)": cleanText(getCell(row, sourceMap.publisher)),
+        "出版年": cleanYear(getCell(row, sourceMap.year)),
+        "索書號-CCL": "",
+        "索書號-LC": "",
+        "索書號-DDC": "",
+        "索書號-NLM": "",
+        "ISBN": uploadIsbn,
+        "資料類型": "",
+        "備註": "",
+        "內容簡介": cleanText(getCell(row, sourceMap.description)),
+        "目次": cleanText(getCell(row, sourceMap.toc)),
+        "pic": "",
+        "書封網址": "",
+        "書封來源": "",
+        "網址": cleanText(getCell(row, sourceMap.url)),
+        "網址說明": "",
+        "SDGs(數字前後一定要有逗號)": settings.sdgs,
+        "主題(英文大小寫皆可，出版社主題若有逗號，請改為 &\n若有多主題以逗號區隔。)": uploadSubject,
+      };
+    }
+
+    function readWorksheetAsTable(workbook, sheetName) {
+      if (!workbook.SheetNames.includes(sheetName)) throw new Error(`找不到工作表「${sheetName}」。`);
+      const sheet = workbook.Sheets[sheetName];
+      const matrix = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", raw: false });
+      const headerRowIndex = detectHeaderRow(matrix);
+      if (headerRowIndex < 0) throw new Error(`工作表「${sheetName}」沒有可讀取的標題列。`);
+      const rawHeaders = matrix[headerRowIndex];
+      const width = rawHeaders.length;
+      const headers = rawHeaders.map((value, index) => cleanText(value) || `欄位${index + 1}`);
+      const rows = matrix.slice(headerRowIndex + 1)
+        .filter((rawRow) => rawRow.some((cell) => cleanText(cell)))
+        .map((rawRow) => {
+          const values = [];
+          for (let index = 0; index < width; index += 1) values.push(cleanText(rawRow[index]));
+          return { values };
+        });
+      if (!rows.length) throw new Error(`工作表「${sheetName}」沒有可處理的資料列。`);
+      return { headers, rows, headerRowIndex };
+    }
+
+    function detectHeaderRow(matrix) {
+      const maxRows = Math.min(matrix.length, 30);
+      let bestIndex = -1;
+      let bestScore = 0;
+      for (let index = 0; index < maxRows; index += 1) {
+        const row = matrix[index] || [];
+        const filled = row.filter((cell) => cleanText(cell)).length;
+        const score = filled + Math.min(filled, 8);
+        if (score > bestScore) {
+          bestScore = score;
+          bestIndex = index;
+        }
+      }
+      return bestScore ? bestIndex : -1;
+    }
+
+    function parseDepartmentRules(csvText, schoolName) {
+      const text = cleanText(csvText);
+      if (!text) throw new Error("請先把 AI 回傳 CSV 貼到工具。");
+      return parseCsvRows(text)
+        .map((row) => ({
+          school: cleanText(row["學校名稱"]),
+          department: cleanText(row["系所名稱"]),
+          keywords: splitKeywords(row["關鍵字"]),
+        }))
+        .filter((rule) => rule.school && schoolMatches(rule.school, schoolName) && rule.department && rule.keywords.length);
+    }
+
+    function parseCsvRows(text) {
+      const lines = text.split(/\r?\n/).filter((line) => cleanText(line));
+      if (lines.length < 2) throw new Error("AI 回傳 CSV 至少要有標題列與一筆資料。");
+      const headers = parseCsvLine(lines[0]).map(cleanText);
+      const requiredHeaders = ["學校名稱", "系所名稱", "關鍵字"];
+      const missingHeaders = requiredHeaders.filter((header) => !headers.includes(header));
+      if (missingHeaders.length) throw new Error(`AI 回傳 CSV 缺少欄位：${missingHeaders.join("、")}。第一列必須是：學校名稱,系所名稱,關鍵字`);
+      return lines.slice(1).map((line) => {
+        const values = parseCsvLine(line);
+        const row = {};
+        headers.forEach((header, index) => { row[header] = values[index] || ""; });
+        return row;
+      });
+    }
+
+    function parseCsvLine(line) {
+      const values = [];
+      let current = "";
+      let inQuotes = false;
+      for (let index = 0; index < line.length; index += 1) {
+        const char = line[index];
+        const next = line[index + 1];
+        if (char === '"' && inQuotes && next === '"') {
+          current += '"';
+          index += 1;
+        } else if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === "," && !inQuotes) {
+          values.push(current);
+          current = "";
+        } else {
+          current += char;
+        }
+      }
+      values.push(current);
+      return values;
+    }
+
+    function splitKeywords(value) {
+      return cleanText(value).split(/[;；]/).map(cleanText).filter((keyword) => keyword.length >= 2);
+    }
+
+    function buildAiPrompt() {
+      const schoolName = cleanText(els.schoolName.value) || "【請填入學校名稱】";
+      const description = cleanText(els.sourceDepartmentText.value) || "【請貼上學院、系所清單或自然語言描述】";
+      return `你是一位圖書館電子書選書與學科分類助理。請把我提供的學校系所描述，整理成可貼回書單比對工具的 CSV，並同時為每個系所產生適合出版社書目比對的關鍵字。
+
+重要：請只輸出 CSV，不要 Markdown，不要程式碼區塊，不要任何說明文字。
+
+CSV 輸出規則：
+1. 第一列固定為：學校名稱,系所名稱,關鍵字
+2. 每一列只放一個系所。
+3. 學校名稱必須完全使用：${schoolName}
+4. 系所名稱請使用完整正式名稱；如果我只給簡稱，請合理補成正式系所名稱。
+5. 關鍵字用半形分號 ; 分隔，不要用逗號分隔關鍵字。
+6. 每個系所至少產生 12 個關鍵字。
+7. 關鍵字要包含中文與英文。
+8. 英文關鍵字要包含學科正式名稱、常見書名詞、研究主題詞，以及出版社書目標題、摘要或主題分類可能出現的詞。
+9. 避免太廣泛的單詞，例如 research、introduction、theory、practice、management 不要單獨列入，除非和具體領域組成片語。
+10. 不要加入其他學校的系所。
+11. 不要合併不同系所。
+
+學校名稱：
+${schoolName}
+
+系所/學院描述：
+${description}
+
+請直接輸出 CSV。`;
+    }
+
+    function readWorkbook(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            resolve(XLSX.read(reader.result, { type: "array", cellDates: false, raw: false }));
+          } catch (error) {
+            reject(new Error(`Excel 讀取失敗：${error.message}`));
+          }
+        };
+        reader.onerror = () => reject(new Error("Excel 讀取失敗。"));
+        reader.readAsArrayBuffer(file);
+      });
+    }
+
+    function readTextFile(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = () => reject(new Error("CSV 讀取失敗。"));
+        reader.readAsText(file, "utf-8");
+      });
+    }
+
+    async function copyText(text) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        return;
+      }
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.left = "-9999px";
+      document.body.appendChild(textarea);
+      textarea.select();
+      const ok = document.execCommand("copy");
+      textarea.remove();
+      if (!ok) throw new Error("copy failed");
+    }
+
+    function getCell(row, index) {
+      if (index === null || index === undefined || Number.isNaN(index)) return "";
+      return cleanText(row.values[index]);
+    }
+
+    function cleanText(value) {
+      return String(value ?? "").replace(/\uFEFF/g, "").replace(/\s+/g, " ").trim();
+    }
+
+    function normalizeHeader(value) {
+      return cleanText(value).toLowerCase().replace(/[\s_\-()（）/\\:：]+/g, "");
+    }
+
+    function normalizeIsbn(value) {
+      return cleanText(value).replace(/[\s-]+/g, "").replace(/[^0-9xX]/g, "").toUpperCase();
+    }
+
+    function cleanIsbn(value) {
+      return cleanText(value).replace(/[\s-]+/g, "").replace(/[^0-9xX]/g, "").toUpperCase();
+    }
+
+    function cleanYear(value) {
+      const match = cleanText(value).match(/\d{4}/);
+      return match ? match[0] : cleanText(value);
+    }
+
+    function cleanUploadSubject(value) {
+      return cleanText(value).replace(/,/g, " &");
+    }
+
+    function firstCleanValue(values, cleaner) {
+      for (const value of values) {
+        const cleaned = cleaner(value);
+        if (cleaned) return cleaned;
+      }
+      return "";
+    }
+
+    function containsCjk(value) {
+      return /[\u3400-\u9fff]/.test(value);
+    }
+
+    function escapeRegExp(value) {
+      return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+
+    function uniqueValues(values) {
+      return Array.from(new Set(values.filter(Boolean)));
+    }
+
+    function schoolMatches(ruleSchool, selectedSchool) {
+      return cleanText(ruleSchool) === cleanText(selectedSchool);
+    }
+
+    function workbookToBytes(workbook) {
+      const array = XLSX.write(workbook, { bookType: "xlsx", type: "array", compression: true });
+      return new Uint8Array(array);
+    }
+
+    function bytesToUrl(bytes) {
+      const blob = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      return URL.createObjectURL(blob);
+    }
+
+    function forceWorkbookDownload(event, bytes, filename) {
+      if (!bytes || !bytes.length) return;
+      event.preventDefault();
+      const url = bytesToUrl(bytes);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename || "output.xlsx";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    function clearOutputs() {
+      state.lastConversion = null;
+      revokeOutputUrls();
+      els.result.hidden = true;
+      els.uploadPanel.hidden = true;
+      els.downloadOutput.hidden = true;
+      els.downloadUpload.hidden = true;
+    }
+
+    function revokeOutputUrls() {
+      if (state.outputUrl) URL.revokeObjectURL(state.outputUrl);
+      if (state.uploadUrl) URL.revokeObjectURL(state.uploadUrl);
+      state.outputUrl = null;
+      state.uploadUrl = null;
+      state.outputBytes = null;
+      state.uploadBytes = null;
+    }
+
+    function showMessage(text, isError) {
+      els.message.textContent = text;
+      els.message.classList.toggle("error", Boolean(isError));
+      els.message.hidden = false;
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      }[char]));
+    }
+  </script>
+</body>
+</html>
