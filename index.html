@@ -1126,10 +1126,7 @@
         const rows = source.rows.map((row) => buildUploadRow(row, settings, uploadMapping));
         validateUploadRows(rows);
 
-        const worksheet = XLSX.utils.json_to_sheet(rows, { header: UPLOAD_COLUMNS });
-        const range = XLSX.utils.decode_range(worksheet["!ref"]);
-        worksheet["!autofilter"] = { ref: XLSX.utils.encode_range(range) };
-        worksheet["!cols"] = UPLOAD_COLUMNS.map((header) => ({ wch: Math.min(Math.max(cleanText(header).length + 2, 12), 34) }));
+        const worksheet = createUploadWorksheet(rows);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Tablib Dataset");
 
@@ -1228,6 +1225,34 @@
         "SDGs": settings.sdgs,
         "主題": cleanUploadSubject(subject)
       };
+    }
+
+    function createUploadWorksheet(rows) {
+      const worksheet = {};
+      const rowCount = Math.max(rows.length + 1, 1);
+      const colCount = UPLOAD_COLUMNS.length;
+
+      UPLOAD_COLUMNS.forEach((header, columnIndex) => {
+        const address = XLSX.utils.encode_cell({ r: 0, c: columnIndex });
+        worksheet[address] = { t: "s", v: header };
+      });
+
+      rows.forEach((row, rowIndex) => {
+        UPLOAD_COLUMNS.forEach((header, columnIndex) => {
+          const value = cleanText(row[header]);
+          if (!value) return;
+          const address = XLSX.utils.encode_cell({ r: rowIndex + 1, c: columnIndex });
+          worksheet[address] = { t: "s", v: value };
+        });
+      });
+
+      worksheet["!ref"] = XLSX.utils.encode_range({
+        s: { r: 0, c: 0 },
+        e: { r: rowCount - 1, c: colCount - 1 }
+      });
+      worksheet["!autofilter"] = { ref: worksheet["!ref"] };
+      worksheet["!cols"] = UPLOAD_COLUMNS.map((header) => ({ wch: Math.min(Math.max(cleanText(header).length + 2, 12), 34) }));
+      return worksheet;
     }
 
     function readWorksheetAsTable(workbook, sheetName) {
