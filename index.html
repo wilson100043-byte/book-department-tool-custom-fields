@@ -330,6 +330,9 @@
 
         <section id="sourceMappingSection" class="mapping-section" hidden>
           <h3>出版社書單欄位用途</h3>
+          <small>
+            請將上傳 Excel 中的欄位對應到本工具要使用的用途。本工具不會修改原始欄位，只會依照你指定的欄位執行系所比對、購買查重與後續系統上傳格式轉換，並在輸出 Excel 最後新增處理結果欄位。
+          </small>
           <div id="sourceMapping" class="mapping-grid"></div>
         </section>
 
@@ -452,25 +455,27 @@
 
   <script>
     const SOURCE_FIELDS = [
-      { key: "title", label: "title：書名", required: true, help: "必填，用於系所比對與系統上傳題名。" },
-      { key: "subject_main", label: "subject_main：主題", required: false, help: "選填，用於系所比對；也可作為上傳主題備援。" },
-      { key: "subject_sub", label: "subject_sub：子主題", required: false, help: "選填，用於系所比對；優先作為上傳主題備援。" },
-      { key: "description", label: "description：內容簡介", required: false, help: "選填，用於系所比對與上傳內容簡介。" },
-      { key: "toc", label: "toc：目次", required: false, help: "選填，用於系所比對與上傳目次。" },
-      { key: "source_purchase_key", label: "source_purchase_key：出版社 ISBN / 查重欄位", required: false, help: "若有已購買書單則必填，用於 ISBN 查重。" },
-      { key: "author", label: "author：作者", required: false, help: "選填，用於系統上傳格式。" },
-      { key: "publisher", label: "publisher：出版者", required: false, help: "選填，用於系統上傳格式。" },
-      { key: "year", label: "year：出版年", required: false, help: "選填，用於系統上傳格式。" },
-      { key: "url", label: "url：網址", required: false, help: "選填，用於系統上傳格式。" },
-      { key: "upload_isbn", label: "upload_isbn：系統上傳用 ISBN", required: false, help: "選填，沒選則使用 source_purchase_key。" },
-      { key: "upload_subject", label: "upload_subject：系統上傳用主題", required: false, help: "選填，沒選則使用 subject_sub，再使用 subject_main。" },
+      { key: "title", label: "title：書名", required: true, help: "必填。用於系所比對，通常是最重要的判斷依據。" },
+      { key: "subject_main", label: "subject_main：主題", required: false, help: "選填，建議設定。用於判斷大學科領域，例如商管、工程、醫學、教育等。" },
+      { key: "subject_sub", label: "subject_sub：子主題", required: false, help: "選填，建議設定。用於判斷更細的學科方向，通常對系所比對很有幫助。" },
+      { key: "description", label: "description：內容簡介", required: false, help: "選填。當書名或主題不夠明確時，用來補強系所比對。" },
+      { key: "toc", label: "toc：目次", required: false, help: "選填。用章節標題提供更細的主題線索，可提升跨領域書籍判斷。" },
+      { key: "source_purchase_key", label: "source_purchase_key：出版社書單 ISBN / 查重欄位", required: false, help: "有已購買書單時建議必填。通常選 ISBN、eISBN 或 O-Book ISBN。" },
+      { key: "author", label: "author：作者", required: false, help: "選填。主要用於輸出與後續系統上傳格式，不參與系所比對。" },
+      { key: "publisher", label: "publisher：出版者", required: false, help: "選填。主要用於輸出與後續系統上傳格式，不參與系所比對。" },
+      { key: "year", label: "year：出版年", required: false, help: "選填。用於輸出、年份篩選與後續系統上傳格式。" },
+      { key: "url", label: "url：網址", required: false, help: "選填。用於輸出書籍連結與後續系統上傳格式。" },
+      { key: "price", label: "price：價格", required: false, help: "選填。用於業務篩選與預算參考，不參與系所比對。" },
+      { key: "language", label: "language：語言", required: false, help: "選填。用於語言篩選，例如英文書、中文書或其他語言。" },
+      { key: "upload_isbn", label: "upload_isbn：系統上傳 ISBN", required: false, help: "選填。產生系統上傳格式時會轉成 ISBN 欄位；未設定時會使用查重欄位。" },
+      { key: "upload_subject", label: "upload_subject：系統上傳主題", required: false, help: "選填。產生系統上傳格式時會轉成系統的主題欄位；未設定時優先使用子主題，再使用主題。" },
     ];
 
     const PURCHASED_FIELDS = [
-      { key: "purchased_key", label: "purchased_key：已購買 ISBN / 查重欄位", required: true, help: "有上傳已購買書單時必填。" },
-      { key: "purchased_title", label: "purchased_title：已購買書名", required: false, help: "選填，只供人工參考，不做模糊比對。" },
-      { key: "purchased_date", label: "purchased_date：採購日期", required: false, help: "選填，輸出到已購買日期。" },
-      { key: "purchased_source", label: "purchased_source：採購來源", required: false, help: "選填，輸出到購買比對來源。" },
+      { key: "purchased_key", label: "purchased_key：已購買 ISBN / 查重欄位", required: true, help: "有上傳或選用已購買書單時必填。用來和出版社書單的查重欄位比對。" },
+      { key: "purchased_title", label: "purchased_title：已購買書名", required: false, help: "選填。僅用於人工檢查與輸出參考，第一版不做書名模糊比對。" },
+      { key: "purchased_date", label: "purchased_date：已購買日期", required: false, help: "選填。若比對到已購買，可輸出購買日期。" },
+      { key: "purchased_source", label: "purchased_source：已購買來源", required: false, help: "選填。若比對到已購買，可輸出購買來源或採購來源。" },
     ];
 
     const RESULT_COLUMNS = [
@@ -561,6 +566,7 @@
         state.sourceWorkbook = await readWorkbook(file);
         populateSheetSelect(els.sourceSheet, state.sourceWorkbook.SheetNames);
         loadSourceSheet();
+        if (!state.purchasedWorkbook) populatePurchasedSheetSelect(state.sourceWorkbook.SheetNames);
         showMessage("出版社書單已讀取。請指定欄位用途。", false);
       } catch (error) {
         resetSource();
@@ -581,13 +587,23 @@
     els.purchasedFile.addEventListener("change", async () => {
       clearOutputs();
       const file = els.purchasedFile.files[0];
-      if (!file) return resetPurchased();
+      if (!file) {
+        state.purchasedWorkbook = null;
+        state.purchasedData = null;
+        els.purchasedMapping.innerHTML = "";
+        els.purchasedMappingSection.hidden = true;
+        if (state.sourceWorkbook) {
+          populatePurchasedSheetSelect(state.sourceWorkbook.SheetNames);
+        } else {
+          els.purchasedSheet.innerHTML = "";
+        }
+        return;
+      }
       try {
         ensureXlsx();
         state.purchasedWorkbook = await readWorkbook(file);
-        populateSheetSelect(els.purchasedSheet, state.purchasedWorkbook.SheetNames);
-        loadPurchasedSheet();
-        showMessage("已購買書單已讀取。請指定已購買查重欄位。", false);
+        populatePurchasedSheetSelect(state.purchasedWorkbook.SheetNames);
+        showMessage("已購買 Excel 已讀取。請選擇已購買工作表並指定查重欄位。", false);
       } catch (error) {
         resetPurchased();
         showMessage(error.message || "已購買書單讀取失敗。", true);
@@ -598,7 +614,10 @@
       clearOutputs();
       try {
         loadPurchasedSheet();
-        showMessage("已購買工作表已切換，欄位用途選單已更新。", false);
+        showMessage(
+          els.purchasedSheet.value ? "已購買工作表已載入，請指定已購買查重欄位。" : "已設定為不使用已購買書單。",
+          false
+        );
       } catch (error) {
         showMessage(error.message || "已購買工作表讀取失敗。", true);
       }
@@ -662,6 +681,13 @@
       select.value = sheetNames[0] || "";
     }
 
+    function populatePurchasedSheetSelect(sheetNames) {
+      els.purchasedSheet.innerHTML = "";
+      els.purchasedSheet.appendChild(new Option("不使用已購買書單", ""));
+      sheetNames.forEach((name) => els.purchasedSheet.appendChild(new Option(name, name)));
+      els.purchasedSheet.value = "";
+    }
+
     function loadSourceSheet() {
       if (!state.sourceWorkbook || !els.sourceSheet.value) return;
       state.sourceData = readWorksheetAsTable(state.sourceWorkbook, els.sourceSheet.value);
@@ -671,8 +697,14 @@
     }
 
     function loadPurchasedSheet() {
-      if (!state.purchasedWorkbook || !els.purchasedSheet.value) return;
-      state.purchasedData = readWorksheetAsTable(state.purchasedWorkbook, els.purchasedSheet.value);
+      const workbook = state.purchasedWorkbook || state.sourceWorkbook;
+      if (!workbook || !els.purchasedSheet.value) {
+        state.purchasedData = null;
+        els.purchasedMapping.innerHTML = "";
+        els.purchasedMappingSection.hidden = true;
+        return;
+      }
+      state.purchasedData = readWorksheetAsTable(workbook, els.purchasedSheet.value);
       renderMappingControls(els.purchasedMapping, PURCHASED_FIELDS, state.purchasedData.headers, "purchased-field");
       applyPurchasedGuesses();
       els.purchasedMappingSection.hidden = false;
@@ -710,6 +742,8 @@
         publisher: ["publisher", "imprint", "出版者", "出版社"],
         year: ["year", "copyright year", "出版年"],
         url: ["url", "網址", "link"],
+        price: ["price", "list price", "價格", "定價", "售價"],
+        language: ["language", "lang", "語言"],
         upload_isbn: ["isbn", "isbn13", "isbn-13", "o-book isbn13", "e-book isbn13", "國際標準書號"],
         upload_subject: ["specialized subject", "sub subject", "主題", "子主題", "次主題"],
       };
