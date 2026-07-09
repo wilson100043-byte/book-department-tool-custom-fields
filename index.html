@@ -340,7 +340,7 @@
 
         <section class="mapping-section">
           <div class="section-title">
-            <h2>2. 系所比對與系統上傳設定</h2>
+            <h2>2. 系所比對設定</h2>
             <p>AI CSV 格式維持：學校名稱,系所名稱,關鍵字。關鍵字可用 ; 或 ； 分隔。</p>
           </div>
 
@@ -348,23 +348,6 @@
             <label>
               <span>學校名稱</span>
               <input id="schoolName" type="text" placeholder="例如：淡江大學">
-            </label>
-
-            <label>
-              <span>學校代碼</span>
-              <input id="schoolCode" type="text" placeholder="例如：TKU">
-            </label>
-
-            <label>
-              <span>主題代碼</span>
-              <input id="subjectCode" type="text" placeholder="例如：EBOOK">
-              <small>會自動轉成大寫，只能使用英文字母、數字與底線。</small>
-            </label>
-
-            <label>
-              <span>SDGs</span>
-              <input id="sdgs" type="text" placeholder=",9,">
-              <small>格式像 ,9, 或 ,9,12,。</small>
             </label>
 
             <label class="wide">
@@ -406,14 +389,31 @@
           </div>
         </section>
 
-        <section id="uploadPanel" class="mapping-section" hidden>
+        <section id="uploadPanel" class="mapping-section">
           <div class="section-title">
-            <h2>3. 產生系統上傳格式</h2>
-            <p>會使用你指定的欄位用途建立 Tablib Dataset，上傳欄位不再依賴任何特定出版社欄名。</p>
+            <h2>3. 系統上傳格式（獨立功能）</h2>
+            <p>這一區不需要先跑系所比對。只要已上傳出版社書單並指定欄位用途，就能直接建立 Tablib Dataset。</p>
+          </div>
+          <div class="form-grid">
+            <label>
+              <span>學校代碼</span>
+              <input id="schoolCode" type="text" placeholder="例如：TKU">
+            </label>
+
+            <label>
+              <span>主題代碼</span>
+              <input id="subjectCode" type="text" placeholder="例如：EBOOK">
+              <small>會自動轉成大寫，只能使用英文字母、數字與底線。</small>
+            </label>
+
+            <label>
+              <span>SDGs</span>
+              <input id="sdgs" type="text" placeholder=",9,">
+              <small>格式像 ,9, 或 ,9,12,。</small>
+            </label>
           </div>
           <div class="actions">
-            <button id="createUploadButton" class="secondary" type="button">產生未購買書目的系統上傳格式</button>
-            <button id="createAllUploadButton" class="secondary" type="button">產生全部書目的系統上傳格式</button>
+            <button id="createUploadButton" class="secondary" type="button">直接產生系統上傳格式</button>
             <a id="downloadUpload" class="button-link" href="#" download="系統上傳格式.xlsx" hidden>下載系統上傳格式</a>
           </div>
         </section>
@@ -427,7 +427,7 @@
             <li>若有已購買書單，也指定查重欄位</li>
             <li>貼上 AI 回傳 CSV 後開始比對</li>
             <li>下載保留原始欄位的結果 Excel</li>
-            <li>需要時再產生系統上傳格式</li>
+            <li>系統上傳格式可在獨立區塊直接產生</li>
           </ul>
         </section>
 
@@ -549,7 +549,6 @@
       downloadOutput: document.querySelector("#downloadOutput"),
       uploadPanel: document.querySelector("#uploadPanel"),
       createUploadButton: document.querySelector("#createUploadButton"),
-      createAllUploadButton: document.querySelector("#createAllUploadButton"),
       downloadUpload: document.querySelector("#downloadUpload"),
     };
 
@@ -630,8 +629,7 @@
       runConversion();
     });
 
-    els.createUploadButton.addEventListener("click", () => createUploadWorkbook(false));
-    els.createAllUploadButton.addEventListener("click", () => createUploadWorkbook(true));
+    els.createUploadButton.addEventListener("click", () => createUploadWorkbook());
 
     els.downloadOutput.addEventListener("click", (event) => forceWorkbookDownload(event, state.outputBytes, els.downloadOutput.download));
     els.downloadUpload.addEventListener("click", (event) => forceWorkbookDownload(event, state.uploadBytes, els.downloadUpload.download));
@@ -810,6 +808,10 @@
       if (purchasedMap.purchased_key === null) throw new Error("請指定已購買書單的 purchased_key。");
     }
 
+    function validateUploadMap(map) {
+      if (map.title === null) throw new Error("請指定出版社書單的 title：書名欄位。");
+    }
+
     function buildResultWorkbookData({ sourceData, sourceMap, purchasedData, purchasedMap, departmentRules }) {
       const purchasedIndex = purchasedData ? buildPurchasedIndex(purchasedData.rows, purchasedMap) : new Map();
       const outputRows = [];
@@ -925,16 +927,16 @@
       els.downloadOutput.href = state.outputUrl;
       els.downloadOutput.hidden = false;
       els.result.hidden = false;
-      els.uploadPanel.hidden = false;
     }
 
-    function createUploadWorkbook(includePurchased) {
+    function createUploadWorkbook() {
       try {
-        if (!state.lastConversion) throw new Error("請先完成書單比對。");
+        ensureXlsx();
+        if (!state.sourceData) throw new Error("請先上傳出版社書單並選擇工作表。");
+        const sourceMap = getFieldMap("source-field");
+        validateUploadMap(sourceMap);
         const settings = getUploadSettings();
-        const rows = state.lastConversion.outputRows
-          .filter((row) => includePurchased || !row.isPurchased)
-          .map((row) => buildUploadRow(row.sourceRow, state.lastConversion.sourceMap, settings));
+        const rows = state.sourceData.rows.map((row) => buildUploadRow(row, sourceMap, settings));
         const worksheet = XLSX.utils.json_to_sheet(rows, { header: UPLOAD_COLUMNS });
         const range = XLSX.utils.decode_range(worksheet["!ref"]);
         worksheet["!autofilter"] = { ref: XLSX.utils.encode_range(range) };
@@ -946,7 +948,7 @@
         state.uploadBytes = workbookToBytes(workbook);
         state.uploadUrl = bytesToUrl(state.uploadBytes);
         els.downloadUpload.href = state.uploadUrl;
-        els.downloadUpload.download = includePurchased ? "系統上傳格式_全部書目.xlsx" : "系統上傳格式_未購買書目.xlsx";
+        els.downloadUpload.download = "系統上傳格式.xlsx";
         els.downloadUpload.hidden = false;
         showMessage(`系統上傳格式已產生，共 ${rows.length} 筆。`, false);
       } catch (error) {
@@ -1244,7 +1246,6 @@ ${description}
       state.lastConversion = null;
       revokeOutputUrls();
       els.result.hidden = true;
-      els.uploadPanel.hidden = true;
       els.downloadOutput.hidden = true;
       els.downloadUpload.hidden = true;
     }
