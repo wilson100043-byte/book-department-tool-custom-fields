@@ -187,8 +187,45 @@
     }
 
     .message.error {
+      position: fixed;
+      left: 50%;
+      bottom: 24px;
+      transform: translateX(-50%);
+      z-index: 9999;
+      width: min(760px, calc(100% - 32px));
+      max-height: min(70vh, 640px);
+      overflow: auto;
       background: var(--danger-bg);
       color: var(--danger);
+      border: 2px solid var(--danger);
+      box-shadow: 0 18px 50px rgb(16 24 40 / 28%);
+    }
+
+    .message-detail-toggle {
+      margin-top: 10px;
+      min-height: 34px;
+      padding: 0 12px;
+      background: #fff;
+      color: var(--danger);
+      border: 1px solid #f4b4ad;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+
+    .message-detail-toggle:hover { background: #fff7f6; }
+
+    .message-detail {
+      margin: 10px 0 0;
+      max-height: 280px;
+      overflow: auto;
+      white-space: pre-wrap;
+      border: 1px solid #f4b4ad;
+      border-radius: 6px;
+      padding: 10px;
+      background: #fff;
+      color: var(--danger);
+      font-weight: 500;
+      line-height: 1.55;
     }
 
     .mapping-section {
@@ -394,29 +431,47 @@
 
         <section id="uploadPanel" class="mapping-section">
           <div class="section-title">
-            <h2>3. 系統上傳格式（獨立功能）</h2>
-            <p>這一區不需要先跑系所比對。只要已上傳出版社書單並指定欄位用途，就能直接建立 Tablib Dataset。</p>
+            <h2>3. 最後一步：產生系統上傳格式</h2>
+            <p>系統上傳格式是獨立欄位轉換階段。這裡是產生系統上傳 Excel 時使用的欄位對應，請選擇原始書單中哪一欄要轉成系統需要的欄位。這不會修改原始資料，只會影響系統上傳格式輸出。</p>
           </div>
           <div class="form-grid">
             <label>
-              <span>學校代碼</span>
-              <input id="schoolCode" type="text" placeholder="例如：TKU">
+              <span>學校代碼 <span class="required-mark">*</span> <small>建議 FLYSHEET</small></span>
+              <input id="schoolCode" type="text" value="FLYSHEET" placeholder="FLYSHEET">
             </label>
 
             <label>
-              <span>主題代碼</span>
+              <span>主題代碼 <span class="required-mark">*</span></span>
               <input id="subjectCode" type="text" placeholder="例如：EBOOK">
               <small>會自動轉成大寫，只能使用英文字母、數字與底線。</small>
             </label>
 
             <label>
-              <span>SDGs</span>
+              <span>SDGs <span class="required-mark">*</span></span>
               <input id="sdgs" type="text" placeholder=",9,">
               <small>格式像 ,9, 或 ,9,12,。</small>
             </label>
           </div>
+
+          <section id="uploadResultMappingSection" class="mapping-section" hidden>
+            <h3>系統上傳欄位對應：從比對結果產生</h3>
+            <small>選項來源為比對結果 Excel 欄位：原始出版社欄位加上工具新增欄位。</small>
+            <div id="uploadResultMapping" class="mapping-grid"></div>
+            <div class="actions">
+              <button id="createUploadFromResultButton" class="secondary" type="button">從比對結果產生系統上傳格式</button>
+            </div>
+          </section>
+
+          <section id="uploadDirectMappingSection" class="mapping-section" hidden>
+            <h3>直接轉系統上傳格式：欄位對應</h3>
+            <small>選項來源為目前出版社書單工作表欄位。這個區塊不依賴前面的系所比對欄位用途設定。</small>
+            <div id="uploadDirectMapping" class="mapping-grid"></div>
+            <div class="actions">
+              <button id="createUploadButton" class="secondary" type="button">直接產生系統上傳格式</button>
+            </div>
+          </section>
+
           <div class="actions">
-            <button id="createUploadButton" class="secondary" type="button">直接產生系統上傳格式</button>
             <a id="downloadUpload" class="button-link" href="#" download="系統上傳格式.xlsx" hidden>下載系統上傳格式</a>
           </div>
         </section>
@@ -491,10 +546,10 @@
     const UPLOAD_COLUMNS = [
       "ID",
       "學校代碼",
-      "主題代碼(全字母大寫)",
-      "題名(可大寫可小寫)",
-      "作者(可大寫可小寫)",
-      "出版者(可大寫可小寫)",
+      "主題代碼",
+      "題名",
+      "作者",
+      "出版者",
       "出版年",
       "索書號-CCL",
       "索書號-LC",
@@ -510,8 +565,32 @@
       "書封來源",
       "網址",
       "網址說明",
-      "SDGs(數字前後一定要有逗號)",
-      "主題(英文大小寫皆可，出版社主題若有逗號，請改為 &\n若有多主題以逗號區隔。)",
+      "SDGs",
+      "主題"
+    ];
+
+    const UPLOAD_FIELDS = [
+      { key: "title", label: "題名來源欄位", required: true, fallbackSlots: 3, help: "必填。可設定第一、第二、第三來源，會依序取第一個非空白值。" },
+      { key: "author", label: "作者來源欄位", required: false, help: "選填。若來源欄位未選或值為空，系統上傳 Excel 的「作者」會輸出空白。" },
+      { key: "publisher", label: "出版者來源欄位", required: true, fallbackSlots: 3, help: "必填。可設定第一、第二、第三來源，會依序取第一個非空白值。" },
+      { key: "year", label: "出版年來源欄位", required: true, fallbackSlots: 3, help: "必填。可設定備援欄位；來源若是 2024-05-01、2024/05/01、May 2024，會只擷取 2024。" },
+      { key: "isbn", label: "ISBN 來源欄位", required: true, fallbackSlots: 3, help: "必填。可設定第一、第二、第三來源，會依序取第一個非空白值，並移除空白與 hyphen。" },
+      { key: "description", label: "內容簡介來源欄位", required: false, help: "選填。可留空。" },
+      { key: "toc", label: "目次來源欄位", required: false, help: "選填。可留空。" },
+      { key: "url", label: "網址來源欄位", required: true, fallbackSlots: 3, help: "必填。可設定第一、第二、第三來源，會依序取第一個非空白值。" },
+      { key: "subject", label: "主題來源欄位", required: true, fallbackSlots: 3, help: "必填。可設定第一、第二、第三來源；英文逗號會轉成 &，最後前後包逗號。" },
+    ];
+
+    const REQUIRED_UPLOAD_VALUE_FIELDS = [
+      { key: "學校代碼", label: "學校代碼" },
+      { key: "主題代碼", label: "主題代碼" },
+      { key: "題名", label: "題名" },
+      { key: "出版者", label: "出版者" },
+      { key: "出版年", label: "出版年" },
+      { key: "ISBN", label: "ISBN" },
+      { key: "網址", label: "網址" },
+      { key: "SDGs", label: "SDGs" },
+      { key: "主題", label: "主題" },
     ];
 
     const state = {
@@ -553,6 +632,11 @@
       departmentCount: document.querySelector("#departmentCount"),
       downloadOutput: document.querySelector("#downloadOutput"),
       uploadPanel: document.querySelector("#uploadPanel"),
+      uploadResultMappingSection: document.querySelector("#uploadResultMappingSection"),
+      uploadResultMapping: document.querySelector("#uploadResultMapping"),
+      uploadDirectMappingSection: document.querySelector("#uploadDirectMappingSection"),
+      uploadDirectMapping: document.querySelector("#uploadDirectMapping"),
+      createUploadFromResultButton: document.querySelector("#createUploadFromResultButton"),
       createUploadButton: document.querySelector("#createUploadButton"),
       downloadUpload: document.querySelector("#downloadUpload"),
     };
@@ -648,8 +732,10 @@
       runConversion();
     });
 
-    els.createUploadButton.addEventListener("click", () => createUploadWorkbook());
+    els.createUploadFromResultButton.addEventListener("click", () => createUploadWorkbook("result"));
+    els.createUploadButton.addEventListener("click", () => createUploadWorkbook("direct"));
 
+    els.subjectCode.addEventListener("input", () => { els.subjectCode.value = els.subjectCode.value.toUpperCase(); });
     els.downloadOutput.addEventListener("click", (event) => forceWorkbookDownload(event, state.outputBytes, els.downloadOutput.download));
     els.downloadUpload.addEventListener("click", (event) => forceWorkbookDownload(event, state.uploadBytes, els.downloadUpload.download));
 
@@ -665,6 +751,8 @@
       els.sourceSheet.innerHTML = "";
       els.sourceMapping.innerHTML = "";
       els.sourceMappingSection.hidden = true;
+      els.uploadDirectMapping.innerHTML = "";
+      els.uploadDirectMappingSection.hidden = true;
     }
 
     function resetPurchased() {
@@ -693,6 +781,9 @@
       state.sourceData = readWorksheetAsTable(state.sourceWorkbook, els.sourceSheet.value);
       renderMappingControls(els.sourceMapping, SOURCE_FIELDS, state.sourceData.headers, "source-field");
       applySourceGuesses();
+      renderUploadMappingControls(els.uploadDirectMapping, state.sourceData.headers, "upload-direct-field");
+      applyUploadGuesses("upload-direct-field", state.sourceData.headers);
+      els.uploadDirectMappingSection.hidden = false;
       els.sourceMappingSection.hidden = false;
     }
 
@@ -716,18 +807,51 @@
         const label = document.createElement("label");
         const title = document.createElement("span");
         title.innerHTML = `${escapeHtml(field.label)} ${field.required ? '<span class="required-mark">*</span>' : ""}`;
-        const select = document.createElement("select");
-        select.setAttribute(`data-${attrName}`, field.key);
-        select.appendChild(new Option("不指定", ""));
-        headers.forEach((header, index) => {
-          const displayName = header ? `${header}（第 ${index + 1} 欄）` : `空白欄名（第 ${index + 1} 欄）`;
-          select.appendChild(new Option(displayName, String(index)));
-        });
+        label.appendChild(title);
+
+        const slotCount = field.fallbackSlots || 1;
+        for (let slot = 0; slot < slotCount; slot += 1) {
+          if (slotCount > 1) {
+            const slotTitle = document.createElement("small");
+            slotTitle.textContent = slot === 0 ? "第一來源" : slot === 1 ? "第二來源（備援）" : `第 ${slot + 1} 來源（備援）`;
+            label.appendChild(slotTitle);
+          }
+
+          const select = document.createElement("select");
+          select.setAttribute(`data-${attrName}`, field.key);
+          if (slotCount > 1) select.setAttribute("data-fallback-index", String(slot));
+          select.appendChild(new Option("不指定", ""));
+          headers.forEach((header, index) => {
+            const displayName = header ? `${header}（第 ${index + 1} 欄）` : `空白欄名（第 ${index + 1} 欄）`;
+            select.appendChild(new Option(displayName, String(index)));
+          });
+          label.appendChild(select);
+        }
+
         const help = document.createElement("small");
         help.textContent = field.help;
-        label.append(title, select, help);
+        label.appendChild(help);
         container.appendChild(label);
       });
+    }
+
+    function renderUploadMappingControls(container, headers, attrName) {
+      renderMappingControls(container, UPLOAD_FIELDS, headers, attrName);
+    }
+
+    function applyUploadGuesses(attrName, headers) {
+      const guesses = {
+        title: ["title", "題名", "書名", "書籍名稱", "book title"],
+        author: ["author", "first author full name", "first author", "作者"],
+        publisher: ["publisher", "imprint", "出版者", "出版社"],
+        year: ["publication year", "copyright year", "year", "出版年", "年份"],
+        isbn: ["isbn", "isbn13", "isbn-13", "o-book isbn13", "e-book isbn13", "國際標準書號"],
+        description: ["description", "abstract", "summary", "內容簡介", "簡介", "摘要"],
+        toc: ["toc", "table of contents", "目次", "目錄"],
+        url: ["url", "url on wiley online library", "網址", "link", "連結"],
+        subject: ["specialized subject area", "main subject category", "subject", "主題", "子主題", "次主題"],
+      };
+      applyGuesses(attrName, headers, guesses);
     }
 
     function applySourceGuesses() {
@@ -825,7 +949,17 @@
       const map = {};
       document.querySelectorAll(`select[data-${attrName}]`).forEach((select) => {
         const key = select.getAttribute(`data-${attrName}`);
-        map[key] = select.value === "" ? null : Number(select.value);
+        const value = select.value === "" ? null : Number(select.value);
+        const fallbackIndex = select.getAttribute("data-fallback-index");
+        if (fallbackIndex !== null) {
+          if (!Array.isArray(map[key])) map[key] = [];
+          map[key][Number(fallbackIndex)] = value;
+        } else {
+          map[key] = value;
+        }
+      });
+      Object.keys(map).forEach((key) => {
+        if (Array.isArray(map[key])) map[key] = map[key].filter((value) => value !== undefined);
       });
       return map;
     }
@@ -843,7 +977,15 @@
     }
 
     function validateUploadMap(map) {
-      if (map.title === null) throw new Error("請指定出版社書單的 title：書名欄位。");
+      const missing = UPLOAD_FIELDS
+        .filter((field) => {
+          if (!field.required) return false;
+          const value = map[field.key];
+          if (Array.isArray(value)) return !value.some((index) => index !== null && index !== undefined && !Number.isNaN(index));
+          return value === null || value === undefined || Number.isNaN(value);
+        })
+        .map((field) => field.label);
+      if (missing.length) throw new Error(`請先指定系統上傳欄位對應：${missing.join("、")}。`);
     }
 
     function buildResultWorkbookData({ sourceData, sourceMap, purchasedData, purchasedMap, departmentRules }) {
@@ -875,6 +1017,7 @@
 
       return {
         sourceHeaders: sourceData.headers.slice(),
+        outputHeaders: [...sourceData.headers, ...RESULT_COLUMNS],
         outputRows,
         totalCount: outputRows.length,
         purchasedCount,
@@ -961,16 +1104,28 @@
       els.downloadOutput.href = state.outputUrl;
       els.downloadOutput.hidden = false;
       els.result.hidden = false;
+
+      renderUploadMappingControls(els.uploadResultMapping, conversion.outputHeaders, "upload-result-field");
+      applyUploadGuesses("upload-result-field", conversion.outputHeaders);
+      els.uploadResultMappingSection.hidden = false;
     }
 
-    function createUploadWorkbook() {
+    function createUploadWorkbook(mode = "direct") {
+      const button = mode === "result" ? els.createUploadFromResultButton : els.createUploadButton;
+      const originalText = button ? button.textContent : "";
       try {
+        setButtonBusy(button, mode === "result" ? "從比對結果產生中..." : "直接轉檔中...");
+        showMessage("正在產生系統上傳格式，請稍候。", false);
+
         ensureXlsx();
-        if (!state.sourceData) throw new Error("請先上傳出版社書單並選擇工作表。");
-        const sourceMap = getFieldMap("source-field");
-        validateUploadMap(sourceMap);
         const settings = getUploadSettings();
-        const rows = state.sourceData.rows.map((row) => buildUploadRow(row, sourceMap, settings));
+        const source = getUploadSource(mode);
+        const uploadMapping = getFieldMap(source.attrName);
+        validateUploadMap(uploadMapping);
+
+        const rows = source.rows.map((row) => buildUploadRow(row, settings, uploadMapping));
+        validateUploadRows(rows);
+
         const worksheet = XLSX.utils.json_to_sheet(rows, { header: UPLOAD_COLUMNS });
         const range = XLSX.utils.decode_range(worksheet["!ref"]);
         worksheet["!autofilter"] = { ref: XLSX.utils.encode_range(range) };
@@ -982,11 +1137,47 @@
         state.uploadBytes = workbookToBytes(workbook);
         state.uploadUrl = bytesToUrl(state.uploadBytes);
         els.downloadUpload.href = state.uploadUrl;
-        els.downloadUpload.download = "系統上傳格式.xlsx";
+        els.downloadUpload.download = mode === "result" ? "系統上傳格式_比對結果.xlsx" : "系統上傳格式.xlsx";
         els.downloadUpload.hidden = false;
         showMessage(`系統上傳格式已產生，共 ${rows.length} 筆。`, false);
       } catch (error) {
         showMessage(error.message || "系統上傳格式產生失敗。", true);
+      } finally {
+        setButtonReady(button, originalText);
+      }
+    }
+
+    function getUploadSource(mode) {
+      if (mode === "result") {
+        if (!state.lastConversion) throw new Error("請先完成比對，才能從比對結果產生系統上傳格式。");
+        return {
+          attrName: "upload-result-field",
+          headers: state.lastConversion.outputHeaders,
+          rows: state.lastConversion.outputRows.map((row) => ({
+            values: [...row.originalValues, ...row.resultValues],
+          })),
+        };
+      }
+      if (!state.sourceData) throw new Error("請先上傳來源 Excel 並選擇工作表。");
+      return {
+        attrName: "upload-direct-field",
+        headers: state.sourceData.headers,
+        rows: state.sourceData.rows,
+      };
+    }
+
+    function validateUploadRows(rows) {
+      const issues = [];
+      rows.forEach((row, index) => {
+        const missing = REQUIRED_UPLOAD_VALUE_FIELDS
+          .filter((field) => !cleanText(row[field.key]))
+          .map((field) => field.label);
+        if (missing.length) issues.push(`第 ${index + 2} 列缺少：${missing.join("、")}`);
+      });
+      if (issues.length) {
+        const preview = issues.slice(0, 20).join("\n");
+        const more = issues.length > 20 ? `\n……另有 ${issues.length - 20} 列缺漏` : "";
+        throw new Error(`系統上傳格式有必填欄位缺漏，已停止輸出：\n${preview}${more}`);
       }
     }
 
@@ -1002,40 +1193,40 @@
       return { schoolCode, subjectCode, sdgs };
     }
 
-    function buildUploadRow(row, sourceMap, settings) {
-      const uploadIsbn = firstCleanValue([
-        getCell(row, sourceMap.upload_isbn),
-        getCell(row, sourceMap.source_purchase_key),
-      ], cleanIsbn);
-      const uploadSubject = firstCleanValue([
-        getCell(row, sourceMap.upload_subject),
-        getCell(row, sourceMap.subject_sub),
-        getCell(row, sourceMap.subject_main),
-      ], cleanUploadSubject);
+    function buildUploadRow(sourceRow, settings, uploadMapping) {
+      const title = firstNonEmptyCell(sourceRow, uploadMapping.title);
+      const author = cleanText(getCell(sourceRow, uploadMapping.author));
+      const publisher = firstNonEmptyCell(sourceRow, uploadMapping.publisher);
+      const year = firstNonEmptyCell(sourceRow, uploadMapping.year);
+      const isbn = cleanIsbn(firstNonEmptyCell(sourceRow, uploadMapping.isbn));
+      const description = cleanText(getCell(sourceRow, uploadMapping.description));
+      const toc = cleanText(getCell(sourceRow, uploadMapping.toc));
+      const url = firstNonEmptyCell(sourceRow, uploadMapping.url);
+      const subject = firstNonEmptyCell(sourceRow, uploadMapping.subject);
       return {
         "ID": "",
         "學校代碼": settings.schoolCode,
-        "主題代碼(全字母大寫)": settings.subjectCode,
-        "題名(可大寫可小寫)": cleanText(getCell(row, sourceMap.title)),
-        "作者(可大寫可小寫)": cleanText(getCell(row, sourceMap.author)),
-        "出版者(可大寫可小寫)": cleanText(getCell(row, sourceMap.publisher)),
-        "出版年": cleanYear(getCell(row, sourceMap.year)),
+        "主題代碼": settings.subjectCode,
+        "題名": title,
+        "作者": author,
+        "出版者": publisher,
+        "出版年": cleanYear(year),
         "索書號-CCL": "",
         "索書號-LC": "",
         "索書號-DDC": "",
         "索書號-NLM": "",
-        "ISBN": uploadIsbn,
+        "ISBN": isbn,
         "資料類型": "",
         "備註": "",
-        "內容簡介": cleanText(getCell(row, sourceMap.description)),
-        "目次": cleanText(getCell(row, sourceMap.toc)),
+        "內容簡介": description,
+        "目次": toc,
         "pic": "",
         "書封網址": "",
         "書封來源": "",
-        "網址": cleanText(getCell(row, sourceMap.url)),
+        "網址": url,
         "網址說明": "",
-        "SDGs(數字前後一定要有逗號)": settings.sdgs,
-        "主題(英文大小寫皆可，出版社主題若有逗號，請改為 &\n若有多主題以逗號區隔。)": uploadSubject,
+        "SDGs": settings.sdgs,
+        "主題": cleanUploadSubject(subject)
       };
     }
 
@@ -1048,8 +1239,9 @@
       const rawHeaders = matrix[headerRowIndex];
       const width = rawHeaders.length;
       const headers = rawHeaders.map((value, index) => cleanText(value) || `欄位${index + 1}`);
-      const rows = matrix.slice(headerRowIndex + 1)
-        .filter((rawRow) => rawRow.some((cell) => cleanText(cell)))
+      const bodyRows = removeFooterRows(matrix.slice(headerRowIndex + 1), width);
+      const rows = bodyRows
+        .filter((rawRow) => rowHasData(rawRow, width))
         .map((rawRow) => {
           const values = [];
           for (let index = 0; index < width; index += 1) values.push(cleanText(rawRow[index]));
@@ -1057,6 +1249,61 @@
         });
       if (!rows.length) throw new Error(`工作表「${sheetName}」沒有可處理的資料列。`);
       return { headers, rows, headerRowIndex };
+    }
+
+    function rowHasData(rawRow, width) {
+      for (let index = 0; index < width; index += 1) {
+        if (cleanText(rawRow[index])) return true;
+      }
+      return false;
+    }
+
+    function removeFooterRows(rawRows, width) {
+      const footerStart = rawRows.findIndex((rawRow) => isFooterLikeRow(rawRow, width));
+      return footerStart >= 0 ? rawRows.slice(0, footerStart) : rawRows;
+    }
+
+    function isFooterLikeRow(rawRow, width) {
+      const values = [];
+      for (let index = 0; index < width; index += 1) {
+        const value = cleanText(rawRow[index]);
+        if (value) values.push(value);
+      }
+      if (!values.length) return false;
+
+      const combined = normalizeFooterText(values.join(" "));
+      const markers = [
+        "download date",
+        "downloaded date",
+        "date downloaded",
+        "generated on",
+        "generated date",
+        "generation date",
+        "report date",
+        "export date",
+        "exported date",
+        "print date",
+        "printed on",
+        "total records",
+        "total results",
+        "search criteria",
+        "query date",
+        "下載日期",
+        "下載時間",
+        "匯出日期",
+        "匯出時間",
+        "產生日期",
+        "產生時間",
+        "報表日期",
+        "列印日期",
+        "總筆數"
+      ];
+
+      return values.length <= 4 && markers.some((marker) => combined.includes(normalizeFooterText(marker)));
+    }
+
+    function normalizeFooterText(value) {
+      return cleanText(value).toLowerCase().replace(/[：:]+/g, " ").replace(/\s+/g, " ").trim();
     }
 
     function detectHeaderRow(matrix) {
@@ -1208,6 +1455,29 @@ ${description}
       if (!ok) throw new Error("copy failed");
     }
 
+    function firstNonEmptyCell(row, indexes) {
+      const list = Array.isArray(indexes) ? indexes : [indexes];
+      for (const index of list) {
+        const value = cleanText(getCell(row, index));
+        if (value) return value;
+      }
+      return "";
+    }
+
+    function setButtonBusy(button, text) {
+      if (!button) return;
+      button.disabled = true;
+      button.dataset.originalText = button.dataset.originalText || button.textContent;
+      button.textContent = text;
+    }
+
+    function setButtonReady(button, fallbackText) {
+      if (!button) return;
+      button.disabled = false;
+      button.textContent = button.dataset.originalText || fallbackText || button.textContent;
+      delete button.dataset.originalText;
+    }
+
     function getCell(row, index) {
       if (index === null || index === undefined || Number.isNaN(index)) return "";
       return cleanText(row.values[index]);
@@ -1230,12 +1500,31 @@ ${description}
     }
 
     function cleanYear(value) {
-      const match = cleanText(value).match(/\d{4}/);
-      return match ? match[0] : cleanText(value);
+      const text = cleanText(value);
+      if (!text) return "";
+      const yearMatch = text.match(/(?:19|20)\d{2}/);
+      if (yearMatch) return yearMatch[0];
+
+      const numeric = Number(text);
+      if (Number.isFinite(numeric) && numeric >= 20000 && numeric <= 60000) {
+        const excelEpoch = Date.UTC(1899, 11, 30);
+        const date = new Date(excelEpoch + numeric * 86400000);
+        const year = date.getUTCFullYear();
+        if (year >= 1900 && year <= 2099) return String(year);
+      }
+
+      const parsed = new Date(text);
+      if (!Number.isNaN(parsed.getTime())) {
+        const year = parsed.getFullYear();
+        if (year >= 1900 && year <= 2099) return String(year);
+      }
+
+      return text;
     }
 
     function cleanUploadSubject(value) {
-      return cleanText(value).replace(/,/g, " &");
+      const cleaned = cleanText(value).replace(/^,+|,+$/g, "").replace(/,/g, " &").trim();
+      return cleaned ? `,${cleaned},` : "";
     }
 
     function firstCleanValue(values, cleaner) {
@@ -1291,6 +1580,7 @@ ${description}
       els.result.hidden = true;
       els.downloadOutput.hidden = true;
       els.downloadUpload.hidden = true;
+      if (els.uploadResultMappingSection) els.uploadResultMappingSection.hidden = true;
     }
 
     function revokeOutputUrls() {
@@ -1303,9 +1593,39 @@ ${description}
     }
 
     function showMessage(text, isError) {
-      els.message.textContent = text;
+      const rawText = String(text || "");
+      els.message.innerHTML = "";
       els.message.classList.toggle("error", Boolean(isError));
       els.message.hidden = false;
+      els.message.setAttribute("role", isError ? "alert" : "status");
+
+      const lines = rawText.split("\n");
+      const shouldCollapse = Boolean(isError) && (lines.length > 1 || rawText.length > 180);
+      const summary = shouldCollapse ? lines[0] : rawText;
+
+      const summaryDiv = document.createElement("div");
+      summaryDiv.textContent = isError ? `錯誤：${summary}` : summary;
+      els.message.appendChild(summaryDiv);
+
+      if (shouldCollapse) {
+        const details = lines.slice(1).join("\n").trim() || rawText;
+        const toggle = document.createElement("button");
+        toggle.type = "button";
+        toggle.className = "message-detail-toggle";
+        toggle.textContent = "查看詳細錯誤";
+
+        const detailBox = document.createElement("pre");
+        detailBox.className = "message-detail";
+        detailBox.textContent = details;
+        detailBox.hidden = true;
+
+        toggle.addEventListener("click", () => {
+          detailBox.hidden = !detailBox.hidden;
+          toggle.textContent = detailBox.hidden ? "查看詳細錯誤" : "收合詳細錯誤";
+        });
+
+        els.message.append(toggle, detailBox);
+      }
     }
 
     function escapeHtml(value) {
