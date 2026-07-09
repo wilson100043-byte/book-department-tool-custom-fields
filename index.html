@@ -1076,7 +1076,7 @@
     }
 
     function parseDepartmentRules(csvText, schoolName) {
-      const text = String(csvText ?? "").replace(/\uFEFF/g, "").trim();
+      const text = normalizeCsvInput(csvText);
       if (!text) throw new Error("請先把 AI 回傳 CSV 貼到工具。");
       return parseCsvRows(text)
         .map((row) => ({
@@ -1087,9 +1087,18 @@
         .filter((rule) => rule.school && schoolMatches(rule.school, schoolName) && rule.department && rule.keywords.length);
     }
 
+    function normalizeCsvInput(value) {
+      return String(value ?? "")
+        .replace(/\uFEFF/g, "")
+        .replace(/\r\n/g, "\n")
+        .replace(/\r/g, "\n")
+        .replace(/\\r\\n|\\n|\\r/g, "\n")
+        .trim();
+    }
+
     function parseCsvRows(text) {
-      const lines = text.split(/\r?\n/).filter((line) => cleanText(line));
-      if (lines.length < 2) throw new Error("AI 回傳 CSV 至少要有標題列與一筆資料。");
+      const lines = text.split("\n").filter((line) => cleanText(line));
+      if (lines.length < 2) throw new Error("AI 回傳 CSV 請至少貼上標題列與一筆資料，例如：學校名稱,系所名稱,關鍵字");
       const headers = parseCsvLine(lines[0]).map(cleanText);
       const requiredHeaders = ["學校名稱", "系所名稱", "關鍵字"];
       const missingHeaders = requiredHeaders.filter((header) => !headers.includes(header));
