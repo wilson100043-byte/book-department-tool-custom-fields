@@ -3,22 +3,30 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>書單已購買與系所比對工具｜自訂欄位用途版</title>
+  <title>書單比對與格式轉換｜自訂欄位用途版</title>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     :root {
-      --bg: #f5f7f8;
+      --bg: #f1f4f5;
       --panel: #ffffff;
-      --text: #17202a;
-      --muted: #667085;
-      --line: #d7dee7;
-      --soft: #f8fafc;
-      --accent: #0f766e;
-      --accent-dark: #115e59;
+      --text: #152128;
+      --muted: #63717a;
+      --line: #d8e0e3;
+      --line-strong: #c1cdd2;
+      --soft: #f7f9f9;
+      --accent: #078779;
+      --accent-dark: #056c62;
+      --navy: #17313d;
+      --navy-soft: #244854;
+      --blue-soft: #f0f6f6;
       --danger: #b42318;
       --danger-bg: #fff1f0;
       --ok-bg: #ecfdf3;
       --ok-text: #067647;
+      --warning-bg: #fff8e7;
+      --warning-text: #8a5a00;
+      --shadow-sm: 0 1px 2px rgb(21 33 40 / 5%);
+      --shadow-md: 0 16px 40px rgb(25 45 54 / 8%);
     }
 
     * { box-sizing: border-box; }
@@ -28,24 +36,34 @@
       min-height: 100vh;
       background: var(--bg);
       color: var(--text);
-      font-family: "Microsoft JhengHei", "PingFang TC", system-ui, sans-serif;
+      font-family: "SF Pro Text", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+      font-feature-settings: "tnum" 1;
+      -webkit-font-smoothing: antialiased;
     }
 
     main {
-      width: min(1180px, calc(100% - 32px));
-      margin: 28px auto 44px;
+      width: min(1260px, calc(100% - 40px));
+      margin: 28px auto 56px;
     }
 
     header {
       display: flex;
       justify-content: space-between;
-      gap: 20px;
-      margin-bottom: 18px;
+      align-items: center;
+      gap: 28px;
+      padding: 26px 28px;
+      border: 1px solid #294754;
+      border-radius: 8px;
+      margin-bottom: 22px;
+      background: var(--navy);
+      box-shadow: 0 18px 44px rgb(20 42 51 / 15%);
     }
 
     h1 {
       margin: 0;
-      font-size: 30px;
+      color: #f8fbfc;
+      font-size: 27px;
+      font-weight: 760;
       letter-spacing: 0;
     }
 
@@ -54,59 +72,67 @@
       letter-spacing: 0;
     }
 
-    h2 { font-size: 20px; }
-    h3 { font-size: 16px; }
+    h2 { font-size: 20px; font-weight: 760; }
+    h3 { font-size: 16px; font-weight: 760; }
 
     .eyebrow {
       margin: 0 0 8px;
-      color: var(--accent);
-      font-size: 14px;
-      font-weight: 700;
+      color: #63d3c4;
+      font-size: 12px;
+      font-weight: 750;
     }
 
     .header-note {
-      max-width: 460px;
+      max-width: 430px;
       margin: 4px 0 0;
-      color: var(--muted);
-      line-height: 1.6;
+      color: #c7d4d9;
+      line-height: 1.55;
+      text-align: right;
+      font-size: 13px;
     }
 
     .layout {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 320px;
-      gap: 18px;
+      grid-template-columns: minmax(0, 1fr) 292px;
+      gap: 20px;
       align-items: start;
     }
 
     .panel {
       background: var(--panel);
-      border: 1px solid var(--line);
+      border: 1px solid #d3dcdf;
       border-radius: 8px;
-      padding: 22px;
-      box-shadow: 0 10px 30px rgb(29 42 49 / 7%);
+      padding: 28px;
+      box-shadow: var(--shadow-md);
     }
 
     .section-title {
-      display: grid;
-      gap: 6px;
-      margin-bottom: 18px;
+      display: flex;
+      align-items: flex-start;
+      gap: 13px;
+      margin-bottom: 22px;
     }
+
+    .section-heading { display: grid; gap: 5px; }
 
     .section-title p {
       margin: 0;
       color: var(--muted);
-      line-height: 1.6;
+      line-height: 1.5;
+      font-size: 13px;
     }
 
     .form-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 18px 20px;
+      gap: 20px 22px;
     }
 
     label {
       display: grid;
       gap: 8px;
+      color: #22313a;
+      font-size: 14px;
       font-weight: 700;
     }
 
@@ -114,14 +140,42 @@
 
     input, select, textarea {
       width: 100%;
-      min-height: 42px;
-      border: 1px solid var(--line);
+      min-height: 44px;
+      border: 1px solid #ccd7db;
       border-radius: 6px;
-      padding: 9px 11px;
+      padding: 10px 12px;
       background: #fff;
       color: var(--text);
       font: inherit;
+      box-shadow: inset 0 1px 1px rgb(27 46 54 / 3%), var(--shadow-sm);
+      transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
     }
+
+    input:hover, select:hover, textarea:hover { border-color: #aebec4; }
+
+    input:disabled, select:disabled, textarea:disabled {
+      color: #8b969c;
+      background: #f3f5f6;
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+
+    input[type="file"] { padding: 6px; }
+
+    input[type="file"]::file-selector-button {
+      min-height: 32px;
+      margin-right: 10px;
+      border: 1px solid #b8c7cc;
+      border-radius: 5px;
+      padding: 0 12px;
+      background: #f5f8f8;
+      color: #263a44;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    input[type="file"]::file-selector-button:hover { background: #eaf1f2; }
 
     textarea {
       min-height: 150px;
@@ -130,13 +184,14 @@
     }
 
     input:focus, select:focus, textarea:focus {
-      outline: 3px solid rgb(15 118 110 / 18%);
+      outline: none;
       border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgb(7 135 121 / 14%), var(--shadow-sm);
     }
 
     small {
       color: var(--muted);
-      font-size: 13px;
+      font-size: 12.5px;
       font-weight: 400;
       line-height: 1.5;
     }
@@ -146,24 +201,33 @@
       align-items: center;
       justify-content: center;
       min-height: 44px;
-      border: 0;
+      border: 1px solid var(--accent);
       border-radius: 6px;
       padding: 0 18px;
       background: var(--accent);
       color: #fff;
       font: inherit;
-      font-weight: 700;
+      font-weight: 750;
       text-decoration: none;
       cursor: pointer;
+      box-shadow: 0 7px 16px rgb(7 135 121 / 18%);
+      transition: background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
     }
 
-    button:hover, .button-link:hover { background: var(--accent-dark); }
-    button:disabled { opacity: .55; cursor: not-allowed; }
+    button:hover, .button-link:hover {
+      border-color: var(--accent-dark);
+      background: var(--accent-dark);
+      box-shadow: 0 9px 20px rgb(5 108 98 / 20%);
+    }
+
+    button:active, .button-link:active { transform: translateY(1px); }
+    button:disabled { opacity: .58; cursor: not-allowed; box-shadow: none; transform: none; }
 
     .secondary {
       background: #e6f2f0;
       color: var(--accent-dark);
       border: 1px solid #b7d8d3;
+      box-shadow: var(--shadow-sm);
     }
 
     .secondary:hover { background: #d7ebe7; }
@@ -179,6 +243,8 @@
     .message {
       margin-top: 16px;
       border-radius: 6px;
+      border: 1px solid #b7dfca;
+      border-left: 4px solid var(--ok-text);
       padding: 12px 14px;
       background: var(--ok-bg);
       color: var(--ok-text);
@@ -189,11 +255,13 @@
     .message.error {
       background: var(--danger-bg);
       color: var(--danger);
+      border-color: #f0b9b5;
+      border-left-color: var(--danger);
     }
 
     .mapping-section {
-      margin-top: 22px;
-      padding-top: 18px;
+      margin-top: 32px;
+      padding-top: 28px;
       border-top: 1px solid var(--line);
     }
 
@@ -201,14 +269,102 @@
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 14px 16px;
-      margin-top: 14px;
+      margin-top: 18px;
     }
 
     .mapping-grid label {
-      padding: 12px;
+      padding: 14px;
       border: 1px solid var(--line);
-      border-radius: 8px;
+      border-radius: 6px;
       background: var(--soft);
+      box-shadow: var(--shadow-sm);
+      transition: border-color 140ms ease, background-color 140ms ease;
+    }
+
+    .mapping-grid label:hover {
+      border-color: #b9c8cd;
+      background: #fbfcfc;
+    }
+
+    .mapping-intro {
+      display: block;
+      max-width: 850px;
+      margin-top: 7px;
+    }
+
+    .mode-section {
+      margin-bottom: 28px;
+      padding-bottom: 28px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .mode-section h2 { margin-bottom: 6px; }
+
+    .mode-section > p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .segmented-control {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 4px;
+      margin-top: 16px;
+      padding: 4px;
+      border: 1px solid #ccd7db;
+      border-radius: 8px;
+      background: #eef2f3;
+      box-shadow: inset 0 1px 2px rgb(27 46 54 / 5%);
+    }
+
+    .segmented-control label {
+      position: relative;
+      display: block;
+      cursor: pointer;
+    }
+
+    .segmented-control input {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      margin: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .segmented-control span {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 40px;
+      border: 1px solid transparent;
+      border-radius: 5px;
+      color: #53636c;
+      font-size: 14px;
+      font-weight: 700;
+      transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
+    }
+
+    .segmented-control input:checked + span {
+      border-color: #b9c8cd;
+      background: #fff;
+      color: var(--navy);
+      box-shadow: 0 2px 7px rgb(25 45 54 / 9%);
+    }
+
+    .segmented-control input:focus-visible + span {
+      outline: 3px solid rgb(7 135 121 / 14%);
+    }
+
+    .mode-description {
+      display: block;
+      margin-top: 10px;
+      color: var(--accent-dark);
+      font-weight: 650;
     }
 
     .required-mark {
@@ -218,7 +374,7 @@
 
     .result-grid {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(var(--stat-columns, 4), minmax(0, 1fr));
       gap: 12px;
       margin-top: 16px;
     }
@@ -226,13 +382,15 @@
     .stat {
       border: 1px solid var(--line);
       border-radius: 8px;
-      padding: 14px;
+      padding: 16px;
       background: var(--soft);
+      box-shadow: var(--shadow-sm);
     }
 
     .stat strong {
       display: block;
-      font-size: 24px;
+      color: var(--navy);
+      font-size: 25px;
       margin-bottom: 4px;
     }
 
@@ -244,16 +402,58 @@
 
     .side-panel {
       position: sticky;
-      top: 16px;
+      top: 20px;
       display: grid;
       gap: 16px;
     }
+
+    .side-panel .panel {
+      padding: 20px;
+      box-shadow: 0 10px 28px rgb(25 45 54 / 6%);
+    }
+
+    .side-panel h2 {
+      color: #29434f;
+      font-size: 15px;
+    }
+
+    .status-list {
+      display: grid;
+      gap: 0;
+      margin-top: 12px;
+    }
+
+    .status-row {
+      display: grid;
+      grid-template-columns: 10px 1fr;
+      gap: 10px;
+      align-items: start;
+      padding: 11px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      margin-top: 5px;
+      border-radius: 50%;
+      background: #a8b3b9;
+      box-shadow: 0 0 0 3px #eef1f2;
+    }
+
+    .status-row.ready .status-dot {
+      background: var(--accent);
+      box-shadow: 0 0 0 3px rgb(7 135 121 / 13%);
+    }
+    .status-row strong { display: block; font-size: 14px; }
+    .status-row small { display: block; margin-top: 2px; }
 
     .plain-list {
       margin: 0;
       padding-left: 20px;
       color: var(--muted);
-      line-height: 1.7;
+      line-height: 1.75;
+      font-size: 13px;
     }
 
     .sample {
@@ -271,19 +471,80 @@
     .note {
       padding: 12px;
       border-radius: 8px;
-      background: #fff7ed;
-      color: #9a3412;
+      border: 1px solid #ead8bd;
+      background: #fffaf1;
+      color: #7d5424;
       line-height: 1.6;
-      font-weight: 700;
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .upload-module {
+      margin: 36px -28px 0;
+      padding: 30px 28px 28px;
+      border-top: 1px solid #b9d0d8;
+      border-bottom: 1px solid #b9d0d8;
+      background: var(--blue-soft);
+      border-radius: 0;
+    }
+
+    .readiness {
+      display: grid;
+      grid-template-columns: 12px 1fr;
+      gap: 10px;
+      align-items: start;
+      margin: 4px 0 18px;
+      padding: 13px 14px;
+      border: 1px solid #ead59f;
+      border-radius: 6px;
+      background: var(--warning-bg);
+      color: var(--warning-text);
+      line-height: 1.5;
+      font-size: 14px;
+      font-weight: 650;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .readiness::before {
+      content: "";
+      width: 9px;
+      height: 9px;
+      margin-top: 5px;
+      border-radius: 50%;
+      background: #d18b00;
+    }
+
+    .readiness.ready {
+      border-color: #a9d7c1;
+      background: var(--ok-bg);
+      color: var(--ok-text);
+    }
+
+    .readiness.ready::before { background: var(--ok-text); }
+
+    .field-note {
+      display: block;
+      padding-left: 10px;
+      border-left: 3px solid #9cbac5;
     }
 
     [hidden] { display: none !important; }
 
     @media (max-width: 900px) {
       header, .layout { display: block; }
-      .header-note { max-width: none; margin-top: 10px; }
+      .header-note { max-width: none; margin-top: 10px; text-align: left; }
       .side-panel { position: static; margin-top: 18px; }
       .form-grid, .mapping-grid, .result-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 560px) {
+      main { width: min(100% - 24px, 1260px); margin: 12px auto 32px; }
+      header { padding: 20px; margin-bottom: 14px; }
+      h1 { font-size: 23px; }
+      .panel { padding: 20px; }
+      .upload-module { margin: 32px -20px 0; padding: 24px 20px 20px; }
+      .actions > button, .actions > .button-link { width: 100%; }
+      .segmented-control { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
   </style>
 </head>
@@ -291,47 +552,74 @@
   <main>
     <header>
       <div>
-        <p class="eyebrow">純前端單檔 HTML + XLSX.js</p>
-        <h1>書單已購買與系所比對</h1>
+        <p class="eyebrow">書單處理工具</p>
+        <h1>書單比對與格式轉換</h1>
       </div>
-      <p class="header-note">自訂欄位用途版。Excel 只在瀏覽器本機處理，輸出保留出版社原始欄位與原始順序，只在最後新增比對結果欄位。</p>
+      <p class="header-note">資料僅於瀏覽器本機處理；輸出保留原始欄位與順序。</p>
     </header>
 
     <section class="layout">
       <form id="matchForm" class="panel">
+        <section class="mode-section">
+          <h2>處理模式</h2>
+          <p>選擇單一功能，或一次完成全部三項處理。</p>
+          <div class="segmented-control" role="radiogroup" aria-label="處理模式">
+            <label>
+              <input type="radio" name="processingMode" value="department">
+              <span>系所比對</span>
+            </label>
+            <label>
+              <input type="radio" name="processingMode" value="purchase">
+              <span>購買查重</span>
+            </label>
+            <label>
+              <input type="radio" name="processingMode" value="upload">
+              <span>系統上傳</span>
+            </label>
+            <label>
+              <input type="radio" name="processingMode" value="combined" checked>
+              <span>完整流程</span>
+            </label>
+          </div>
+          <small id="modeDescription" class="mode-description">一次完成系所比對、購買查重與系統上傳格式。</small>
+        </section>
+
         <div class="section-title">
-          <h2>1. 上傳書單並指定欄位用途</h2>
-          <p>先選工作表，工具會讀取欄位列，再由你指定哪些欄位要當書名、主題、ISBN 或系統上傳欄位。</p>
+          <div class="section-heading">
+            <h2>書單與欄位設定</h2>
+            <p>上傳出版社書單，指定比對與輸出所需欄位。</p>
+          </div>
         </div>
 
         <div class="form-grid">
           <label class="wide">
-            <span>出版社書單 Excel</span>
+            <span>出版社書單</span>
             <input id="sourceFile" type="file" accept=".xlsx,.xls,.xltx">
-            <small>必填。支援一般出版社書單，不限定 Wiley 欄位名稱。</small>
+            <small>必填。支援自訂欄位名稱。</small>
           </label>
 
           <label>
-            <span>出版社書單工作表</span>
-            <select id="sourceSheet"></select>
+            <span>出版社工作表</span>
+            <select id="sourceSheet" disabled></select>
           </label>
 
-          <label>
-            <span>已購買 Excel（選填）</span>
+          <label id="purchasedFileField">
+            <span id="purchasedFileLabel">已購買書單</span>
             <input id="purchasedFile" type="file" accept=".xlsx,.xls,.xltx">
-            <small>若上傳，會使用 ISBN / 查重欄位做精準比對。</small>
+            <small id="purchasedFileHelp">購買查重與完整流程必填，以指定 ISBN 欄位精確查重。</small>
           </label>
 
-          <label>
+          <label id="purchasedSheetField">
             <span>已購買工作表</span>
-            <select id="purchasedSheet"></select>
+            <select id="purchasedSheet" disabled></select>
+            <small>上傳已購買書單後可選擇。</small>
           </label>
         </div>
 
         <section id="sourceMappingSection" class="mapping-section" hidden>
           <h3>出版社書單欄位用途</h3>
-          <small>
-            請將上傳 Excel 中的欄位對應到本工具要使用的用途。本工具不會修改原始欄位，只會依照你指定的欄位執行系所比對、購買查重與後續系統上傳格式轉換，並在輸出 Excel 最後新增處理結果欄位。
+          <small class="mapping-intro">
+            將 Excel 欄位對應至工具用途。原始欄位不會變更；系所比對、購買查重與格式轉換只使用指定欄位。
           </small>
           <div id="sourceMapping" class="mapping-grid"></div>
         </section>
@@ -341,10 +629,12 @@
           <div id="purchasedMapping" class="mapping-grid"></div>
         </section>
 
-        <section class="mapping-section">
+        <section id="departmentSection" class="mapping-section">
           <div class="section-title">
-            <h2>2. 系所比對設定</h2>
-            <p>AI CSV 格式維持：學校名稱,系所名稱,關鍵字。關鍵字可用 ; 或 ； 分隔。</p>
+            <div class="section-heading">
+              <h2>系所比對</h2>
+              <p>使用系所關鍵字 CSV 進行比對，輸出保留原始欄位。</p>
+            </div>
           </div>
 
           <div class="form-grid">
@@ -354,100 +644,106 @@
             </label>
 
             <label class="wide">
-              <span>貼上學校系所描述（給 AI 用）</span>
-              <textarea id="sourceDepartmentText" placeholder="可貼上學院、系所清單、學校網頁整理文字。"></textarea>
+              <span>學校系所資料（供 AI 整理）</span>
+              <textarea id="sourceDepartmentText" placeholder="貼上學院、系所清單或學校資料。"></textarea>
             </label>
 
             <label class="wide">
-              <span>AI 產生用 Prompt</span>
-              <button id="copyPromptButton" class="secondary" type="button">複製 AI 產生系所關鍵字 Prompt</button>
-              <small>貼到 ChatGPT、Gemini 或其他 AI。AI 回傳後，把整段 CSV 貼到下一格。</small>
+              <span>系所關鍵字 Prompt</span>
+              <button id="copyPromptButton" class="secondary" type="button">複製系所關鍵字 Prompt</button>
+              <small>將 Prompt 貼至 AI；完成後將回傳 CSV 貼至下方。</small>
             </label>
 
             <label class="wide">
-              <span>AI 回傳結果（CSV）</span>
+              <span>系所關鍵字 CSV</span>
               <textarea id="keywordText" placeholder="學校名稱,系所名稱,關鍵字&#10;淡江大學,財務金融學系,財務金融;金融;投資;corporate finance"></textarea>
             </label>
 
             <label class="wide">
-              <span>AI 回傳 CSV 檔（選填）</span>
+              <span>CSV 檔案（選填）</span>
               <input id="keywordFile" type="file" accept=".csv,.txt">
             </label>
           </div>
         </section>
 
-        <div class="actions">
-          <button id="submitButton" type="submit">開始比對並產生 Excel</button>
-          <a id="downloadOutput" class="button-link" href="#" download="書單_自訂欄位用途_比對結果.xlsx" hidden>下載比對結果 Excel</a>
-        </div>
-
-        <section id="message" class="message" hidden></section>
-
-        <section id="result" hidden>
-          <div class="result-grid">
-            <div class="stat"><strong id="totalCount">0</strong><span>總筆數</span></div>
-            <div class="stat"><strong id="purchasedCount">0</strong><span>已購買</span></div>
-            <div class="stat"><strong id="notPurchasedCount">0</strong><span>未購買</span></div>
-            <div class="stat"><strong id="departmentCount">0</strong><span>命中系所</span></div>
-          </div>
-        </section>
-
-        <section id="uploadPanel" class="mapping-section">
+        <section id="uploadPanel" class="upload-module">
           <div class="section-title">
-            <h2>3. 系統上傳格式（獨立功能）</h2>
-            <p>這一區不需要先跑系所比對。只要已上傳出版社書單並指定欄位用途，就能直接建立 Tablib Dataset。</p>
+            <div class="section-heading">
+              <h2>系統上傳格式</h2>
+              <p>設定系統上傳欄位與批次填入內容。</p>
+            </div>
           </div>
+          <div id="uploadReadiness" class="readiness" role="status">尚未就緒：請先上傳出版社書單並完成必要設定。</div>
           <div class="form-grid">
             <label>
               <span>學校代碼</span>
-              <input id="schoolCode" type="text" placeholder="例如：TKU">
+              <input id="schoolCode" type="text" placeholder="例如：FLYSHEET">
+              <small>建議填入 FLYSHEET。</small>
             </label>
 
             <label>
               <span>主題代碼</span>
               <input id="subjectCode" type="text" placeholder="例如：EBOOK">
-              <small>會自動轉成大寫，只能使用英文字母、數字與底線。</small>
+              <small>自動轉為大寫；限英文字母、數字與底線。</small>
             </label>
 
             <label>
-              <span>SDGs</span>
+              <span>SDGs（批次填入）</span>
               <input id="sdgs" type="text" placeholder=",9,">
-              <small>格式像 ,9, 或 ,9,12,。</small>
+              <small class="field-note">同一設定會填入所有資料列。格式：,9, 或 ,9,12,；個別值請於匯出後修改。</small>
             </label>
           </div>
-          <div class="actions">
-            <button id="createUploadButton" class="secondary" type="button">直接產生系統上傳格式</button>
-            <a id="downloadUpload" class="button-link" href="#" download="系統上傳格式.xlsx" hidden>下載系統上傳格式</a>
+        </section>
+
+        <div class="actions">
+          <button id="submitButton" type="submit">執行完整流程並產生檔案</button>
+          <a id="downloadOutput" class="button-link" href="#" download="書單_自訂欄位用途_比對結果.xlsx" hidden>下載比對結果</a>
+          <a id="downloadUpload" class="button-link" href="#" download="系統上傳格式.xlsx" hidden>下載系統上傳格式</a>
+        </div>
+
+        <section id="message" class="message" hidden></section>
+
+        <section id="result" hidden>
+          <div id="resultGrid" class="result-grid">
+            <div class="stat"><strong id="totalCount">0</strong><span>總筆數</span></div>
+            <div id="purchasedStat" class="stat"><strong id="purchasedCount">0</strong><span>已購買</span></div>
+            <div id="notPurchasedStat" class="stat"><strong id="notPurchasedCount">0</strong><span>未購買</span></div>
+            <div id="departmentStat" class="stat"><strong id="departmentCount">0</strong><span>命中系所</span></div>
           </div>
         </section>
       </form>
 
       <aside class="side-panel">
         <section class="panel">
-          <h2>流程</h2>
-          <ul class="plain-list">
-            <li>上傳出版社書單並指定欄位用途</li>
-            <li>若有已購買書單，也指定查重欄位</li>
-            <li>貼上 AI 回傳 CSV 後開始比對</li>
-            <li>下載保留原始欄位的結果 Excel</li>
-            <li>系統上傳格式可在獨立區塊直接產生</li>
-          </ul>
+          <h2>工作狀態</h2>
+          <div class="status-list">
+            <div id="sourceStatus" class="status-row">
+              <span class="status-dot"></span>
+              <div><strong>出版社書單</strong><small>尚未上傳</small></div>
+            </div>
+            <div id="mappingStatus" class="status-row">
+              <span class="status-dot"></span>
+              <div><strong>必要欄位</strong><small>等待書單</small></div>
+            </div>
+            <div id="purchasedStatus" class="status-row">
+              <span class="status-dot"></span>
+              <div><strong>購買查重</strong><small>未使用</small></div>
+            </div>
+          </div>
         </section>
 
         <section class="panel">
-          <h2>AI 回傳格式</h2>
+          <h2>比對規則</h2>
           <ul class="plain-list">
-            <li>第一列固定：學校名稱、系所名稱、關鍵字</li>
-            <li>關鍵字用半形或全形分號分隔</li>
-            <li>比對文字只取你指定的書名、主題、子主題、內容簡介、目次</li>
+            <li>CSV 欄位：學校名稱、系所名稱、關鍵字</li>
+            <li>關鍵字用 ; 或 ； 分隔</li>
+            <li>只比對指定的五種內容欄位</li>
+            <li>ISBN 查重不使用書名模糊比對</li>
           </ul>
-          <pre class="sample">學校名稱,系所名稱,關鍵字
-淡江大學,財務金融學系,財務金融;金融;投資;corporate finance
-淡江大學,會計學系,會計;審計;稅務;accounting;auditing</pre>
         </section>
 
         <section class="note">
-          ISBN 查重會先移除空白、hyphen 與非 0-9/X 字元，並轉成大寫。不做書名模糊比對。
+          三項功能可分別使用；完整流程會一次完成全部處理。
         </section>
       </aside>
     </section>
@@ -455,27 +751,27 @@
 
   <script>
     const SOURCE_FIELDS = [
-      { key: "title", label: "title：書名", required: true, help: "必填。用於系所比對，通常是最重要的判斷依據。" },
-      { key: "subject_main", label: "subject_main：主題", required: false, help: "選填，建議設定。用於判斷大學科領域，例如商管、工程、醫學、教育等。" },
-      { key: "subject_sub", label: "subject_sub：子主題", required: false, help: "選填，建議設定。用於判斷更細的學科方向，通常對系所比對很有幫助。" },
-      { key: "description", label: "description：內容簡介", required: false, help: "選填。當書名或主題不夠明確時，用來補強系所比對。" },
-      { key: "toc", label: "toc：目次", required: false, help: "選填。用章節標題提供更細的主題線索，可提升跨領域書籍判斷。" },
-      { key: "source_purchase_key", label: "source_purchase_key：出版社書單 ISBN / 查重欄位", required: false, help: "有已購買書單時建議必填。通常選 ISBN、eISBN 或 O-Book ISBN。" },
-      { key: "author", label: "author：作者", required: false, help: "選填。主要用於輸出與後續系統上傳格式，不參與系所比對。" },
-      { key: "publisher", label: "publisher：出版者", required: false, help: "選填。主要用於輸出與後續系統上傳格式，不參與系所比對。" },
-      { key: "year", label: "year：出版年", required: false, help: "選填。用於輸出、年份篩選與後續系統上傳格式。" },
-      { key: "url", label: "url：網址", required: false, help: "選填。用於輸出書籍連結與後續系統上傳格式。" },
-      { key: "price", label: "price：價格", required: false, help: "選填。用於業務篩選與預算參考，不參與系所比對。" },
-      { key: "language", label: "language：語言", required: false, help: "選填。用於語言篩選，例如英文書、中文書或其他語言。" },
-      { key: "upload_isbn", label: "upload_isbn：系統上傳 ISBN", required: false, help: "選填。產生系統上傳格式時會轉成 ISBN 欄位；未設定時會使用查重欄位。" },
-      { key: "upload_subject", label: "upload_subject：系統上傳主題", required: false, help: "選填。產生系統上傳格式時會轉成系統的主題欄位；未設定時優先使用子主題，再使用主題。" },
+      { key: "title", label: "title：書名", required: true, help: "系所比對與系統上傳時必填。" },
+      { key: "subject_main", label: "subject_main：主題", required: false, help: "建議設定。用於判斷主要學科領域。" },
+      { key: "subject_sub", label: "subject_sub：子主題", required: false, help: "建議設定。用於辨識細分學科方向。" },
+      { key: "description", label: "description：內容簡介", required: false, help: "書名或主題資訊不足時，補充比對依據。" },
+      { key: "toc", label: "toc：目次", required: false, help: "以章節標題補充主題線索。" },
+      { key: "source_purchase_key", label: "source_purchase_key：出版社書單 ISBN / 查重欄位", required: false, help: "購買查重時必填。建議選 ISBN、eISBN 或 O-Book ISBN。" },
+      { key: "author", label: "author：作者", required: false, help: "供系統上傳格式使用，不參與系所比對。" },
+      { key: "publisher", label: "publisher：出版者", required: false, help: "供系統上傳格式使用，不參與系所比對。" },
+      { key: "year", label: "year：出版年", required: false, help: "供年份篩選與系統上傳格式使用。" },
+      { key: "url", label: "url：網址", required: false, help: "供書籍連結與系統上傳格式使用。" },
+      { key: "price", label: "price：價格", required: false, help: "供預算與業務篩選，不參與系所比對。" },
+      { key: "language", label: "language：語言", required: false, help: "供書籍語言篩選。" },
+      { key: "upload_isbn", label: "upload_isbn：系統上傳 ISBN", required: false, help: "未設定時使用查重欄位。" },
+      { key: "upload_subject", label: "upload_subject：系統上傳主題", required: false, help: "未設定時依序使用子主題、主題。" },
     ];
 
     const PURCHASED_FIELDS = [
-      { key: "purchased_key", label: "purchased_key：已購買 ISBN / 查重欄位", required: true, help: "有上傳或選用已購買書單時必填。用來和出版社書單的查重欄位比對。" },
-      { key: "purchased_title", label: "purchased_title：已購買書名", required: false, help: "選填。僅用於人工檢查與輸出參考，第一版不做書名模糊比對。" },
-      { key: "purchased_date", label: "purchased_date：已購買日期", required: false, help: "選填。若比對到已購買，可輸出購買日期。" },
-      { key: "purchased_source", label: "purchased_source：已購買來源", required: false, help: "選填。若比對到已購買，可輸出購買來源或採購來源。" },
+      { key: "purchased_key", label: "purchased_key：已購買 ISBN / 查重欄位", required: true, help: "購買查重時必填。與出版社書單的查重欄位比對。" },
+      { key: "purchased_title", label: "purchased_title：已購買書名", required: false, help: "供人工檢查，不進行書名模糊比對。" },
+      { key: "purchased_date", label: "purchased_date：已購買日期", required: false, help: "比對成功時輸出購買日期。" },
+      { key: "purchased_source", label: "purchased_source：已購買來源", required: false, help: "比對成功時輸出採購來源。" },
     ];
 
     const RESULT_COLUMNS = [
@@ -536,6 +832,11 @@
       purchasedMappingSection: document.querySelector("#purchasedMappingSection"),
       sourceMapping: document.querySelector("#sourceMapping"),
       purchasedMapping: document.querySelector("#purchasedMapping"),
+      departmentSection: document.querySelector("#departmentSection"),
+      modeDescription: document.querySelector("#modeDescription"),
+      purchasedFileField: document.querySelector("#purchasedFileField"),
+      purchasedSheetField: document.querySelector("#purchasedSheetField"),
+      purchasedFileLabel: document.querySelector("#purchasedFileLabel"),
       schoolName: document.querySelector("#schoolName"),
       schoolCode: document.querySelector("#schoolCode"),
       subjectCode: document.querySelector("#subjectCode"),
@@ -547,15 +848,25 @@
       submitButton: document.querySelector("#submitButton"),
       message: document.querySelector("#message"),
       result: document.querySelector("#result"),
+      resultGrid: document.querySelector("#resultGrid"),
       totalCount: document.querySelector("#totalCount"),
       purchasedCount: document.querySelector("#purchasedCount"),
       notPurchasedCount: document.querySelector("#notPurchasedCount"),
       departmentCount: document.querySelector("#departmentCount"),
+      purchasedStat: document.querySelector("#purchasedStat"),
+      notPurchasedStat: document.querySelector("#notPurchasedStat"),
+      departmentStat: document.querySelector("#departmentStat"),
       downloadOutput: document.querySelector("#downloadOutput"),
       uploadPanel: document.querySelector("#uploadPanel"),
-      createUploadButton: document.querySelector("#createUploadButton"),
+      uploadReadiness: document.querySelector("#uploadReadiness"),
       downloadUpload: document.querySelector("#downloadUpload"),
+      sourceStatus: document.querySelector("#sourceStatus"),
+      mappingStatus: document.querySelector("#mappingStatus"),
+      purchasedStatus: document.querySelector("#purchasedStatus"),
     };
+
+    updateProcessingMode();
+    updateInterfaceStatus();
 
     els.sourceFile.addEventListener("change", async () => {
       clearOutputs();
@@ -566,8 +877,8 @@
         state.sourceWorkbook = await readWorkbook(file);
         populateSheetSelect(els.sourceSheet, state.sourceWorkbook.SheetNames);
         loadSourceSheet();
-        if (!state.purchasedWorkbook) populatePurchasedSheetSelect(state.sourceWorkbook.SheetNames);
-        showMessage("出版社書單已讀取。請指定欄位用途。", false);
+        updateInterfaceStatus();
+        showMessage("出版社書單已載入，請確認欄位設定。", false);
       } catch (error) {
         resetSource();
         showMessage(error.message || "出版社書單讀取失敗。", true);
@@ -578,7 +889,8 @@
       clearOutputs();
       try {
         loadSourceSheet();
-        showMessage("出版社工作表已切換，欄位用途選單已更新。", false);
+        updateInterfaceStatus();
+        showMessage("工作表已切換，欄位設定已更新。", false);
       } catch (error) {
         showMessage(error.message || "工作表讀取失敗。", true);
       }
@@ -592,18 +904,17 @@
         state.purchasedData = null;
         els.purchasedMapping.innerHTML = "";
         els.purchasedMappingSection.hidden = true;
-        if (state.sourceWorkbook) {
-          populatePurchasedSheetSelect(state.sourceWorkbook.SheetNames);
-        } else {
-          els.purchasedSheet.innerHTML = "";
-        }
+        els.purchasedSheet.innerHTML = "";
+        els.purchasedSheet.disabled = true;
+        updateInterfaceStatus();
         return;
       }
       try {
         ensureXlsx();
         state.purchasedWorkbook = await readWorkbook(file);
         populatePurchasedSheetSelect(state.purchasedWorkbook.SheetNames);
-        showMessage("已購買 Excel 已讀取。請選擇已購買工作表並指定查重欄位。", false);
+        updateInterfaceStatus();
+        showMessage("已購買書單已載入，請選擇工作表並設定查重欄位。", false);
       } catch (error) {
         resetPurchased();
         showMessage(error.message || "已購買書單讀取失敗。", true);
@@ -614,6 +925,7 @@
       clearOutputs();
       try {
         loadPurchasedSheet();
+        updateInterfaceStatus();
         showMessage(
           els.purchasedSheet.value ? "已購買工作表已載入，請指定已購買查重欄位。" : "已設定為不使用已購買書單。",
           false
@@ -628,7 +940,7 @@
       if (!file) return;
       try {
         els.keywordText.value = await readTextFile(file);
-        showMessage("AI 回傳 CSV 已載入。", false);
+        showMessage("系所關鍵字 CSV 已載入。", false);
       } catch (error) {
         showMessage(error.message || "CSV 讀取失敗。", true);
       }
@@ -637,7 +949,7 @@
     els.copyPromptButton.addEventListener("click", async () => {
       try {
         await copyText(buildAiPrompt());
-        showMessage("已複製 Prompt。請貼到 AI，回傳 CSV 後再貼回工具。", false);
+        showMessage("Prompt 已複製。完成後請將 AI 產生的 CSV 貼回工具。", false);
       } catch (error) {
         showMessage("瀏覽器無法自動複製，請手動選取 Prompt 內容。", true);
       }
@@ -648,7 +960,17 @@
       runConversion();
     });
 
-    els.createUploadButton.addEventListener("click", () => createUploadWorkbook());
+    document.querySelectorAll('input[name="processingMode"]').forEach((radio) => {
+      radio.addEventListener("change", () => {
+        clearOutputs();
+        updateProcessingMode();
+        updateInterfaceStatus();
+      });
+    });
+
+    els.sourceMapping.addEventListener("change", updateInterfaceStatus);
+    els.purchasedMapping.addEventListener("change", updateInterfaceStatus);
+    [els.schoolCode, els.subjectCode, els.sdgs].forEach((input) => input.addEventListener("input", updateInterfaceStatus));
 
     els.downloadOutput.addEventListener("click", (event) => forceWorkbookDownload(event, state.outputBytes, els.downloadOutput.download));
     els.downloadUpload.addEventListener("click", (event) => forceWorkbookDownload(event, state.uploadBytes, els.downloadUpload.download));
@@ -663,22 +985,27 @@
       state.sourceWorkbook = null;
       state.sourceData = null;
       els.sourceSheet.innerHTML = "";
+      els.sourceSheet.disabled = true;
       els.sourceMapping.innerHTML = "";
       els.sourceMappingSection.hidden = true;
+      updateInterfaceStatus();
     }
 
     function resetPurchased() {
       state.purchasedWorkbook = null;
       state.purchasedData = null;
       els.purchasedSheet.innerHTML = "";
+      els.purchasedSheet.disabled = true;
       els.purchasedMapping.innerHTML = "";
       els.purchasedMappingSection.hidden = true;
+      updateInterfaceStatus();
     }
 
     function populateSheetSelect(select, sheetNames) {
       select.innerHTML = "";
       sheetNames.forEach((name) => select.appendChild(new Option(name, name)));
       select.value = sheetNames[0] || "";
+      select.disabled = !sheetNames.length;
     }
 
     function populatePurchasedSheetSelect(sheetNames) {
@@ -686,6 +1013,7 @@
       els.purchasedSheet.appendChild(new Option("不使用已購買書單", ""));
       sheetNames.forEach((name) => els.purchasedSheet.appendChild(new Option(name, name)));
       els.purchasedSheet.value = "";
+      els.purchasedSheet.disabled = !sheetNames.length;
     }
 
     function loadSourceSheet() {
@@ -694,10 +1022,11 @@
       renderMappingControls(els.sourceMapping, SOURCE_FIELDS, state.sourceData.headers, "source-field");
       applySourceGuesses();
       els.sourceMappingSection.hidden = false;
+      updateInterfaceStatus();
     }
 
     function loadPurchasedSheet() {
-      const workbook = state.purchasedWorkbook || state.sourceWorkbook;
+      const workbook = state.purchasedWorkbook;
       if (!workbook || !els.purchasedSheet.value) {
         state.purchasedData = null;
         els.purchasedMapping.innerHTML = "";
@@ -707,15 +1036,18 @@
       state.purchasedData = readWorksheetAsTable(workbook, els.purchasedSheet.value);
       renderMappingControls(els.purchasedMapping, PURCHASED_FIELDS, state.purchasedData.headers, "purchased-field");
       applyPurchasedGuesses();
-      els.purchasedMappingSection.hidden = false;
+      updateProcessingMode();
+      updateInterfaceStatus();
     }
 
     function renderMappingControls(container, fields, headers, attrName) {
       container.innerHTML = "";
       fields.forEach((field) => {
         const label = document.createElement("label");
+        label.setAttribute("data-mapping-key", field.key);
+        label.setAttribute("data-mapping-type", attrName);
         const title = document.createElement("span");
-        title.innerHTML = `${escapeHtml(field.label)} ${field.required ? '<span class="required-mark">*</span>' : ""}`;
+        title.innerHTML = `${escapeHtml(field.label)} <span class="required-mark" hidden>*</span>`;
         const select = document.createElement("select");
         select.setAttribute(`data-${attrName}`, field.key);
         select.appendChild(new Option("不指定", ""));
@@ -727,6 +1059,66 @@
         help.textContent = field.help;
         label.append(title, select, help);
         container.appendChild(label);
+      });
+      updateRequiredIndicators();
+    }
+
+    function getProcessingMode() {
+      return document.querySelector('input[name="processingMode"]:checked')?.value || "combined";
+    }
+
+    function getModeFlags() {
+      const mode = getProcessingMode();
+      return {
+        mode,
+        includeDepartment: mode === "department" || mode === "combined",
+        includePurchase: mode === "purchase" || mode === "combined",
+        includeUpload: mode === "upload" || mode === "combined",
+      };
+    }
+
+    function updateProcessingMode() {
+      const flags = getModeFlags();
+      const descriptions = {
+        department: "僅執行系所關鍵字比對，不需已購買書單。",
+        purchase: "僅以 ISBN 執行購買查重，不需學校名稱或系所關鍵字 CSV。",
+        upload: "僅產生系統上傳格式，不執行系所比對或購買查重。",
+        combined: "一次完成系所比對、購買查重與系統上傳格式。",
+      };
+      els.modeDescription.textContent = descriptions[flags.mode];
+      els.departmentSection.hidden = !flags.includeDepartment;
+      els.purchasedFileField.hidden = !flags.includePurchase;
+      els.purchasedSheetField.hidden = !flags.includePurchase;
+      els.purchasedFileLabel.textContent = flags.includePurchase ? "已購買書單（必填）" : "已購買書單";
+      els.purchasedMappingSection.hidden = !flags.includePurchase || !state.purchasedData;
+      els.uploadPanel.hidden = !flags.includeUpload;
+      els.departmentStat.hidden = !flags.includeDepartment;
+      els.purchasedStat.hidden = !flags.includePurchase;
+      els.notPurchasedStat.hidden = !flags.includePurchase;
+      els.result.hidden = flags.mode === "upload" || !state.lastConversion;
+      els.submitButton.textContent = getSubmitButtonText(flags.mode);
+      updateRequiredIndicators();
+    }
+
+    function getSubmitButtonText(mode = getProcessingMode()) {
+      if (mode === "department") return "執行系所比對並產生 Excel";
+      if (mode === "purchase") return "執行購買查重並產生 Excel";
+      if (mode === "upload") return "產生系統上傳格式";
+      return "執行完整流程並產生檔案";
+    }
+
+    function updateRequiredIndicators() {
+      const flags = getModeFlags();
+      document.querySelectorAll("[data-mapping-key]").forEach((label) => {
+        const key = label.getAttribute("data-mapping-key");
+        const type = label.getAttribute("data-mapping-type");
+        const required = (
+          (type === "source-field" && key === "title" && (flags.includeDepartment || flags.includeUpload)) ||
+          (type === "source-field" && key === "source_purchase_key" && flags.includePurchase) ||
+          (type === "purchased-field" && key === "purchased_key" && flags.includePurchase)
+        );
+        const mark = label.querySelector(".required-mark");
+        if (mark) mark.hidden = !required;
       });
     }
 
@@ -789,35 +1181,60 @@
       try {
         ensureXlsx();
         if (!state.sourceData) throw new Error("請先上傳出版社書單並選擇工作表。");
+        const flags = getModeFlags();
         const sourceMap = getFieldMap("source-field");
-        validateSourceMap(sourceMap);
-        const hasPurchased = Boolean(state.purchasedData);
-        const purchasedMap = hasPurchased ? getFieldMap("purchased-field") : {};
-        if (hasPurchased) validatePurchasedMap(sourceMap, purchasedMap);
+        validateSourceMap(sourceMap, flags);
+        let uploadSettings = null;
+        if (flags.includeUpload) {
+          validateUploadMap(sourceMap);
+          uploadSettings = getUploadSettings();
+        }
 
-        const schoolName = cleanText(els.schoolName.value);
-        if (!schoolName) throw new Error("請輸入學校名稱。");
-        const departmentRules = parseDepartmentRules(els.keywordText.value, schoolName);
-        if (!departmentRules.length) throw new Error(`AI 回傳結果找不到「${schoolName}」的資料。`);
+        let purchasedMap = {};
+        if (flags.includePurchase) {
+          if (!state.purchasedData) throw new Error("請上傳已購買書單並選擇工作表。");
+          purchasedMap = getFieldMap("purchased-field");
+          validatePurchasedMap(sourceMap, purchasedMap);
+        }
+
+        let departmentRules = [];
+        if (flags.includeDepartment) {
+          const schoolName = cleanText(els.schoolName.value);
+          if (!schoolName) throw new Error("請輸入學校名稱。");
+          departmentRules = parseDepartmentRules(els.keywordText.value, schoolName);
+          if (!departmentRules.length) throw new Error(`系所關鍵字 CSV 找不到「${schoolName}」的資料。`);
+        }
 
         els.submitButton.disabled = true;
-        els.submitButton.textContent = "比對中...";
+        els.submitButton.textContent = "處理中...";
 
-        const conversion = buildResultWorkbookData({
-          sourceData: state.sourceData,
-          sourceMap,
-          purchasedData: state.purchasedData,
-          purchasedMap,
-          departmentRules,
-        });
-        state.lastConversion = conversion;
-        renderResult(conversion);
-        showMessage("比對完成。結果 Excel 已保留原始欄位，並在最後新增結果欄位。", false);
+        let conversion = null;
+        if (flags.includeDepartment || flags.includePurchase) {
+          conversion = buildResultWorkbookData({
+            sourceData: state.sourceData,
+            sourceMap,
+            purchasedData: flags.includePurchase ? state.purchasedData : null,
+            purchasedMap,
+            departmentRules,
+            ...flags,
+          });
+          state.lastConversion = conversion;
+          renderResult(conversion);
+        }
+
+        const uploadCount = flags.includeUpload ? createUploadWorkbook(sourceMap, uploadSettings) : 0;
+        if (flags.mode === "upload") {
+          showMessage(`系統上傳格式已產生，共 ${uploadCount} 筆。`, false);
+        } else if (flags.mode === "combined") {
+          showMessage(`完整流程已完成，共 ${conversion.totalCount} 筆。請下載比對結果與系統上傳格式。`, false);
+        } else {
+          showMessage("處理完成。結果欄位已新增至原始欄位之後。", false);
+        }
       } catch (error) {
-        showMessage(error.message || "比對失敗，請確認檔案與欄位設定。", true);
+        showMessage(error.message || "處理失敗，請確認檔案與欄位設定。", true);
       } finally {
-        els.submitButton.disabled = false;
-        els.submitButton.textContent = "開始比對並產生 Excel";
+        els.submitButton.textContent = getSubmitButtonText();
+        updateInterfaceStatus();
       }
     }
 
@@ -830,10 +1247,12 @@
       return map;
     }
 
-    function validateSourceMap(map) {
-      if (map.title === null) throw new Error("請指定出版社書單的 title：書名欄位。");
-      if (state.purchasedData && map.source_purchase_key === null) {
-        throw new Error("有上傳已購買書單時，請指定 source_purchase_key：出版社 ISBN / 查重欄位。");
+    function validateSourceMap(map, flags) {
+      if (flags.includeDepartment && map.title === null) {
+        throw new Error("請指定出版社書單的 title：書名欄位。");
+      }
+      if (flags.includePurchase && map.source_purchase_key === null) {
+        throw new Error("請指定 source_purchase_key：出版社 ISBN / 查重欄位。");
       }
     }
 
@@ -846,24 +1265,90 @@
       if (map.title === null) throw new Error("請指定出版社書單的 title：書名欄位。");
     }
 
-    function buildResultWorkbookData({ sourceData, sourceMap, purchasedData, purchasedMap, departmentRules }) {
-      const purchasedIndex = purchasedData ? buildPurchasedIndex(purchasedData.rows, purchasedMap) : new Map();
+    function updateInterfaceStatus() {
+      if (!els.sourceStatus) return;
+      const flags = getModeFlags();
+      setStatusRow(
+        els.sourceStatus,
+        Boolean(state.sourceData),
+        state.sourceData ? `已載入 ${state.sourceData.rows.length} 筆` : "尚未上傳"
+      );
+
+      const titleSelect = document.querySelector('select[data-source-field="title"]');
+      const titleReady = Boolean(state.sourceData && titleSelect && titleSelect.value !== "");
+      const sourceKeySelect = document.querySelector('select[data-source-field="source_purchase_key"]');
+      const sourceKeyReady = Boolean(state.sourceData && sourceKeySelect && sourceKeySelect.value !== "");
+      const purchasedKeySelect = document.querySelector('select[data-purchased-field="purchased_key"]');
+      const purchasedKeyReady = Boolean(state.purchasedData && purchasedKeySelect && purchasedKeySelect.value !== "");
+      const requiredFieldsReady = (
+        (!(flags.includeDepartment || flags.includeUpload) || titleReady) &&
+        (!flags.includePurchase || (sourceKeyReady && purchasedKeyReady))
+      );
+      const missingFields = [];
+      if ((flags.includeDepartment || flags.includeUpload) && !titleReady) missingFields.push("書名");
+      if (flags.includePurchase && !sourceKeyReady) missingFields.push("出版社查重欄位");
+      if (flags.includePurchase && !purchasedKeyReady) missingFields.push("已購買查重欄位");
+      setStatusRow(
+        els.mappingStatus,
+        Boolean(state.sourceData && requiredFieldsReady),
+        !state.sourceData ? "等待書單" : requiredFieldsReady ? "必要欄位已指定" : `待設定：${missingFields.join("、")}`
+      );
+
+      const purchaseReady = flags.includePurchase && Boolean(state.purchasedData);
+      setStatusRow(
+        els.purchasedStatus,
+        purchaseReady,
+        !flags.includePurchase ? "此模式未使用" : purchaseReady ? "已啟用 ISBN 查重" : "等待已購買書單"
+      );
+
+      const missing = [];
+      if (!state.sourceData) missing.push("出版社書單");
+      if (state.sourceData && !titleReady) missing.push("書名欄位");
+      if (!cleanText(els.schoolCode.value)) missing.push("學校代碼");
+
+      const subjectCode = cleanText(els.subjectCode.value).toUpperCase();
+      if (!subjectCode) missing.push("主題代碼");
+      else if (!/^[A-Z0-9_]+$/.test(subjectCode)) missing.push("正確格式的主題代碼");
+
+      const sdgs = cleanText(els.sdgs.value);
+      if (!sdgs) missing.push("SDGs");
+      else if (!/^,(?:\d+,)+$/.test(sdgs)) missing.push("正確格式的 SDGs");
+
+      const ready = missing.length === 0;
+      els.submitButton.disabled = flags.includeUpload ? !ready : false;
+      els.uploadReadiness.classList.toggle("ready", ready);
+      els.uploadReadiness.textContent = ready
+        ? (flags.mode === "combined" ? "系統上傳設定完成。" : "設定完成：可產生系統上傳格式。")
+        : `尚未就緒：請完成 ${missing.join("、")}。`;
+    }
+
+    function setStatusRow(row, ready, text) {
+      row.classList.toggle("ready", ready);
+      row.querySelector("small").textContent = text;
+    }
+
+    function buildResultWorkbookData({ sourceData, sourceMap, purchasedData, purchasedMap, departmentRules, includeDepartment, includePurchase, mode }) {
+      const purchasedIndex = includePurchase ? buildPurchasedIndex(purchasedData.rows, purchasedMap) : new Map();
       const outputRows = [];
       let purchasedCount = 0;
       let departmentHitCount = 0;
 
       sourceData.rows.forEach((row) => {
-        const matchResult = matchDepartments(row, sourceMap, departmentRules);
-        const purchaseResult = findPurchase(row, sourceMap, purchasedIndex);
-        if (purchaseResult.isPurchased) purchasedCount += 1;
-        if (matchResult.departments.length) departmentHitCount += 1;
+        const matchResult = includeDepartment
+          ? matchDepartments(row, sourceMap, departmentRules)
+          : { departments: [], keywords: [] };
+        const purchaseResult = includePurchase
+          ? findPurchase(row, sourceMap, purchasedIndex)
+          : { isPurchased: false, value: "", source: "", date: "" };
+        if (includePurchase && purchaseResult.isPurchased) purchasedCount += 1;
+        if (includeDepartment && matchResult.departments.length) departmentHitCount += 1;
         outputRows.push({
           originalValues: row.values.slice(),
           resultValues: [
             matchResult.departments.join("；"),
             matchResult.keywords.join("；"),
-            matchResult.departments.length ? "已標記" : "未標記",
-            purchasedData ? (purchaseResult.isPurchased ? "已購買" : "未購買") : "未比對",
+            includeDepartment ? (matchResult.departments.length ? "已標記" : "未標記") : "未執行",
+            includePurchase ? (purchaseResult.isPurchased ? "已購買" : "未購買") : "未執行",
             purchaseResult.value,
             purchaseResult.source,
             purchaseResult.date,
@@ -878,9 +1363,10 @@
         outputRows,
         totalCount: outputRows.length,
         purchasedCount,
-        notPurchasedCount: purchasedData ? outputRows.length - purchasedCount : 0,
+        notPurchasedCount: includePurchase ? outputRows.length - purchasedCount : 0,
         departmentHitCount,
         sourceMap,
+        mode,
       };
     }
 
@@ -958,36 +1444,28 @@
       els.purchasedCount.textContent = conversion.purchasedCount;
       els.notPurchasedCount.textContent = conversion.notPurchasedCount;
       els.departmentCount.textContent = conversion.departmentHitCount;
+      els.resultGrid.style.setProperty("--stat-columns", conversion.mode === "combined" ? 4 : conversion.mode === "purchase" ? 3 : 2);
       els.downloadOutput.href = state.outputUrl;
       els.downloadOutput.hidden = false;
       els.result.hidden = false;
     }
 
-    function createUploadWorkbook() {
-      try {
-        ensureXlsx();
-        if (!state.sourceData) throw new Error("請先上傳出版社書單並選擇工作表。");
-        const sourceMap = getFieldMap("source-field");
-        validateUploadMap(sourceMap);
-        const settings = getUploadSettings();
-        const rows = state.sourceData.rows.map((row) => buildUploadRow(row, sourceMap, settings));
-        const worksheet = XLSX.utils.json_to_sheet(rows, { header: UPLOAD_COLUMNS });
-        const range = XLSX.utils.decode_range(worksheet["!ref"]);
-        worksheet["!autofilter"] = { ref: XLSX.utils.encode_range(range) };
-        worksheet["!cols"] = UPLOAD_COLUMNS.map((header) => ({ wch: Math.min(Math.max(cleanText(header).length + 2, 12), 34) }));
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Tablib Dataset");
+    function createUploadWorkbook(sourceMap, settings) {
+      const rows = state.sourceData.rows.map((row) => buildUploadRow(row, sourceMap, settings));
+      const worksheet = XLSX.utils.json_to_sheet(rows, { header: UPLOAD_COLUMNS });
+      const range = XLSX.utils.decode_range(worksheet["!ref"]);
+      worksheet["!autofilter"] = { ref: XLSX.utils.encode_range(range) };
+      worksheet["!cols"] = UPLOAD_COLUMNS.map((header) => ({ wch: Math.min(Math.max(cleanText(header).length + 2, 12), 34) }));
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Tablib Dataset");
 
-        if (state.uploadUrl) URL.revokeObjectURL(state.uploadUrl);
-        state.uploadBytes = workbookToBytes(workbook);
-        state.uploadUrl = bytesToUrl(state.uploadBytes);
-        els.downloadUpload.href = state.uploadUrl;
-        els.downloadUpload.download = "系統上傳格式.xlsx";
-        els.downloadUpload.hidden = false;
-        showMessage(`系統上傳格式已產生，共 ${rows.length} 筆。`, false);
-      } catch (error) {
-        showMessage(error.message || "系統上傳格式產生失敗。", true);
-      }
+      if (state.uploadUrl) URL.revokeObjectURL(state.uploadUrl);
+      state.uploadBytes = workbookToBytes(workbook);
+      state.uploadUrl = bytesToUrl(state.uploadBytes);
+      els.downloadUpload.href = state.uploadUrl;
+      els.downloadUpload.download = "系統上傳格式.xlsx";
+      els.downloadUpload.hidden = false;
+      return rows.length;
     }
 
     function getUploadSettings() {
@@ -1077,7 +1555,7 @@
 
     function parseDepartmentRules(csvText, schoolName) {
       const text = normalizeCsvInput(csvText);
-      if (!text) throw new Error("請先把 AI 回傳 CSV 貼到工具。");
+      if (!text) throw new Error("請貼上系所關鍵字 CSV。");
       return parseCsvRows(text)
         .map((row) => ({
           school: cleanText(row["學校名稱"]),
@@ -1098,11 +1576,11 @@
 
     function parseCsvRows(text) {
       const lines = text.split("\n").filter((line) => cleanText(line));
-      if (lines.length < 2) throw new Error("AI 回傳 CSV 請至少貼上標題列與一筆資料，例如：學校名稱,系所名稱,關鍵字");
+      if (lines.length < 2) throw new Error("系所關鍵字 CSV 至少需要標題列與一筆資料，例如：學校名稱,系所名稱,關鍵字");
       const headers = parseCsvLine(lines[0]).map(cleanText);
       const requiredHeaders = ["學校名稱", "系所名稱", "關鍵字"];
       const missingHeaders = requiredHeaders.filter((header) => !headers.includes(header));
-      if (missingHeaders.length) throw new Error(`AI 回傳 CSV 缺少欄位：${missingHeaders.join("、")}。第一列必須是：學校名稱,系所名稱,關鍵字`);
+      if (missingHeaders.length) throw new Error(`系所關鍵字 CSV 缺少欄位：${missingHeaders.join("、")}。標題列必須是：學校名稱,系所名稱,關鍵字`);
       return lines.slice(1).map((line) => {
         const values = parseCsvLine(line);
         const row = {};
